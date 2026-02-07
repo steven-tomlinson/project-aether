@@ -75,7 +75,7 @@ def analyze_vibe(text_sample: str) -> Dict[str, Any]:
 
 def analyze_full_content(text: str) -> Dict[str, Any]:
     """
-    Uses Gemini 2.0 Flash to analyze the ENTIRE text and break it down into cinematic scenes.
+    Uses Gemini 3.0 Flash to analyze the ENTIRE text and break it down into cinematic scenes.
     Generates prompts for 'Nano Banana' (Images) and 'Veo' (Video).
     """
     if not client:
@@ -111,7 +111,7 @@ def analyze_full_content(text: str) -> Dict[str, Any]:
     try:
         # We use the Flash model as it has a large context window (1M tokens) suitable for full books
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-3.0-flash",
             contents=[prompt, text],
             config=types.GenerateContentConfig(
                 response_mime_type="application/json"
@@ -126,8 +126,8 @@ def process_book_content(filename: str, content: str) -> Dict[str, Any]:
     """
     Orchestrates the ingestion process with Deep Analysis.
     """
-    # 1. Deep Analysis (Gemini 2.0 Flash)
-    print(f"Ingesting {filename} ({len(content)} chars)... Sending to Gemini 2.0 Flash...")
+    # 1. Deep Analysis (Gemini 3.0 Flash)
+    print(f"Ingesting {filename} ({len(content)} chars)... Sending to Gemini 3.0 Flash...")
     
     analysis = analyze_full_content(content)
     
