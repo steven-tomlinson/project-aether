@@ -1,83 +1,89 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="referrer" content="no-referrer-when-downgrade" />
-    <title>Project Aether</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&family=Merriweather:wght@300;400;700&display=swap" rel="stylesheet">
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              aether: {
-                black: '#0a0a0c',
-                dark: '#121214',
-                zinc: '#27272a',
-                amber: '#ffb000',
-                glow: '#ffcd4d',
-                dim: 'rgba(255, 176, 0, 0.1)',
-              }
-            },
-            fontFamily: {
-              mono: ['"Share Tech Mono"', 'monospace'],
-              display: ['"Orbitron"', 'sans-serif'],
-              serif: ['"Merriweather"', 'serif'],
-            },
-            animation: {
-              'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-              'flicker': 'flicker 0.15s infinite',
-            },
-            keyframes: {
-              flicker: {
-                '0%, 100%': { opacity: '1' },
-                '50%': { opacity: '0.98' },
-              }
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="referrer" content="no-referrer-when-downgrade" />
+  <title>Project Aether</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&family=Merriweather:wght@300;400;700&display=swap"
+    rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            aether: {
+              black: '#0a0a0c',
+              dark: '#121214',
+              zinc: '#27272a',
+              amber: '#ffb000',
+              glow: '#ffcd4d',
+              dim: 'rgba(255, 176, 0, 0.1)',
+            }
+          },
+          fontFamily: {
+            mono: ['"Share Tech Mono"', 'monospace'],
+            display: ['"Orbitron"', 'sans-serif'],
+            serif: ['"Merriweather"', 'serif'],
+          },
+          animation: {
+            'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'flicker': 'flicker 0.15s infinite',
+          },
+          keyframes: {
+            flicker: {
+              '0%, 100%': { opacity: '1' },
+              '50%': { opacity: '0.98' },
             }
           }
         }
       }
-    </script>
-    <style>
-      body {
-        background-color: #050505;
-        color: #e4e4e7;
-      }
-      .scanlines {
-        background: linear-gradient(
-          to bottom,
-          rgba(255,255,255,0),
-          rgba(255,255,255,0) 50%,
-          rgba(0,0,0,0.2) 50%,
-          rgba(0,0,0,0.2)
-        );
-        background-size: 100% 4px;
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        pointer-events: none;
-        z-index: 50;
-        opacity: 0.6;
-      }
-      .crt-flicker {
-        animation: flicker 0.15s infinite;
-      }
-      /* Custom Scrollbar */
-      ::-webkit-scrollbar {
-        width: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: #121214; 
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #27272a; 
-        border: 1px solid #ffb000;
-      }
-    </style>
+    }
+  </script>
+  <style>
+    body {
+      background-color: #050505;
+      color: #e4e4e7;
+    }
+
+    .scanlines {
+      background: linear-gradient(to bottom,
+          rgba(255, 255, 255, 0),
+          rgba(255, 255, 255, 0) 50%,
+          rgba(0, 0, 0, 0.2) 50%,
+          rgba(0, 0, 0, 0.2));
+      background-size: 100% 4px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      z-index: 50;
+      opacity: 0.6;
+    }
+
+    .crt-flicker {
+      animation: flicker 0.15s infinite;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #121214;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #27272a;
+      border: 1px solid #ffb000;
+    }
+  </style>
   <script type="importmap">
 {
   "imports": {
@@ -92,9 +98,12 @@
 }
 </script>
 </head>
-  <body>
-    <div id="root"></div>
-    <div class="scanlines"></div>
-    <script type="module" src="/index.tsx"></script>
-  </body>
+
+<body>
+  <div id="root"></div>
+  <div class="scanlines"></div>
+  <script async defer src="https://apis.google.com/js/api.js"></script>
+  <script type="module" src="/index.tsx"></script>
+</body>
+
 </html>

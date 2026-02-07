@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { BookManifest, User } from '../types';
 import BookCard from './BookCard';
-import { Terminal, Cpu, Database, Plus, LogIn, LogOut, HardDrive, User as UserIcon, ShieldAlert } from 'lucide-react';
+import { Terminal, Cpu, Database, Plus, LogIn, LogOut, HardDrive, User as UserIcon, ShieldAlert, ChevronDown, Upload, FileText } from 'lucide-react';
 
 interface LibraryShelfProps {
   books: BookManifest[];
   onSelectBook: (book: BookManifest) => void;
-  onUpload: (file: File) => void;
+  onLocalIngest: (file: File) => void;
+  onDriveIngest: () => void;
   user: User | null;
   onLogin: () => void;
   onMockLogin: () => void; // New prop for dev bypass
@@ -14,27 +15,56 @@ interface LibraryShelfProps {
   isUploading?: boolean;
 }
 
-const LibraryShelf: React.FC<LibraryShelfProps> = ({ books, onSelectBook, onUpload, user, onLogin, onMockLogin, onLogout, isUploading = false }) => {
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+const LibraryShelf: React.FC<LibraryShelfProps> = ({ 
+  books, 
+  onSelectBook, 
+  onLocalIngest, 
+  onDriveIngest, 
+  user, 
+  onLogin, 
+  onMockLogin, 
+  onLogout, 
+  isUploading = false 
+}) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isIngestMenuOpen, setIsIngestMenuOpen] = useState(false);
+  const ingestMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (ingestMenuRef.current && !ingestMenuRef.current.contains(event.target as Node)) {
+        setIsIngestMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       if (file) {
-          onUpload(file);
+          onLocalIngest(file);
       }
       // Reset input
       if (fileInputRef.current) {
           fileInputRef.current.value = '';
       }
+      setIsIngestMenuOpen(false);
   };
   
-  const handleIngestClick = () => {
+  const handleLocalClick = () => {
+     fileInputRef.current?.click();
+  };
+
+  const handleDriveClick = () => {
     if (!user) {
-      alert("ACCESS DENIED: Authentication Required for Deep Archive Ingestion.\nPlease sign in with Google Identity.");
+      alert("ACCESS DENIED: Google Identity Required for Drive Access.");
       onLogin();
     } else {
-      fileInputRef.current?.click();
+      onDriveIngest();
     }
+    setIsIngestMenuOpen(false);
   };
 
   return (
@@ -122,14 +152,53 @@ const LibraryShelf: React.FC<LibraryShelfProps> = ({ books, onSelectBook, onUplo
               </div>
             )}
 
-            <button 
-              onClick={handleIngestClick}
-              disabled={isUploading}
-              className={`hidden sm:flex items-center gap-2 px-4 py-2 bg-aether-amber/10 border border-aether-amber/50 hover:bg-aether-amber hover:text-black transition-all text-xs font-mono uppercase tracking-widest group text-aether-amber ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <Plus size={14} className={`group-hover:rotate-90 transition-transform ${isUploading ? 'animate-spin' : ''}`} />
-              {isUploading ? 'VIBE_CODING...' : 'Ingest'}
-            </button>
+            {/* Ingest Dropdown */}
+            <div className="relative" ref={ingestMenuRef}>
+              <button 
+                onClick={() => setIsIngestMenuOpen(!isIngestMenuOpen)}
+                disabled={isUploading}
+                className={`hidden sm:flex items-center gap-2 px-4 py-2 bg-aether-amber/10 border border-aether-amber/50 hover:bg-aether-amber hover:text-black transition-all text-xs font-mono uppercase tracking-widest group text-aether-amber ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <Plus size={14} className={`group-hover:rotate-90 transition-transform ${isUploading ? 'animate-spin' : ''}`} />
+                {isUploading ? 'VIBE_CODING...' : 'Ingest'}
+                <ChevronDown size={14} className={`transition-transform ${isIngestMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Dropdown Menu */}
+              {isIngestMenuOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-zinc-900 border border-aether-amber shadow-xl shadow-aether-amber/10 rounded-sm overflow-hidden z-50">
+                  <div className="p-2 border-b border-zinc-800 text-[10px] font-mono text-zinc-500 uppercase tracking-widest">
+                    Select Data Source
+                  </div>
+                  
+                  <button 
+                    onClick={handleLocalClick}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-zinc-800 transition-colors text-gray-300 hover:text-white group"
+                  >
+                    <div className="w-8 h-8 rounded-sm bg-zinc-800 flex items-center justify-center text-aether-amber group-hover:bg-aether-amber group-hover:text-black transition-colors">
+                      <FileText size={16} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold font-display tracking-wide">LOCAL CARTRIDGE</div>
+                      <div className="text-[10px] text-zinc-500 font-mono">.TXT / .MD Upload</div>
+                    </div>
+                  </button>
+
+                  <button 
+                    onClick={handleDriveClick}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-zinc-800 transition-colors text-gray-300 hover:text-white group border-t border-zinc-800"
+                  >
+                    <div className="w-8 h-8 rounded-sm bg-zinc-800 flex items-center justify-center text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                      <HardDrive size={16} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold font-display tracking-wide">GOOGLE DRIVE</div>
+                      <div className="text-[10px] text-zinc-500 font-mono">Cloud Import</div>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>

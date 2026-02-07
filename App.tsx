@@ -61,7 +61,7 @@ function App() {
     // Explicitly set flow to implicit to avoid confusion in dynamic environments
     flow: 'implicit',
     // Request scope for reading files (future proofing for "Ingest" feature)
-    scope: 'https://www.googleapis.com/auth/drive.readonly profile email' 
+    scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/documents.readonly profile email' 
   });
 
   // MOCK Login / Guest Access for Preview Environments
@@ -94,23 +94,108 @@ function App() {
 
   const [books, setBooks] = useState<BookManifest[]>(LIBRARY_MANIFEST);
   const [isUploading, setIsUploading] = useState(false);
+  const [pickerInited, setPickerInited] = useState(false);
+  const [gisInited, setGisInited] = useState(false);
 
-  const handleUpload = async (file: File) => {
+  // Load Google API for Picker
+  useEffect(() => {
+    const loadGapi = () => {
+      window.gapi.load('picker', () => {
+        setPickerInited(true);
+      });
+    };
+    
+    // Check if script is loaded, if not wait for it
+    if (window.gapi) {
+        loadGapi();
+    } else {
+        const interval = setInterval(() => {
+            if (window.gapi) {
+                clearInterval(interval);
+                loadGapi();
+            }
+        }, 500);
+    }
+  }, []);
+
+  const handleDriveSelect = async (data: any) => {
+    if (data.action === window.google.picker.Action.PICKED) {
+      const fileId = data.docs[0].id;
+      const fileName = data.docs[0].name;
+      const mimeType = data.docs[0].mimeType;
+      const oauthToken = user?.token;
+
+      if (!oauthToken) return;
+
+      setIsUploading(true);
+      try {
+        console.log(`FETCHING_DRIVE_FILE: ${fileId} (${mimeType})`);
+        
+        let url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
+        
+        // If it's a Google Doc, we must export it as text/plain
+        if (mimeType === 'application/vnd.google-apps.document') {
+            url = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=text/plain`;
+        }
+
+        const response = await axios.get(url, {
+            headers: { Authorization: `Bearer ${oauthToken}` },
+            responseType: 'blob' // Important: treat as blob/file
+        });
+
+        const file = new File([response.data], fileName, { type: 'text/plain' });
+        
+        // Send to Ingestion Engine
+        const newBook = await uploadBook(file);
+        setBooks(prev => [...prev, newBook]);
+        alert(`INGESTION COMPLETE: ${newBook.title}`);
+
+      } catch (error) {
+        console.error("Drive Download Failed", error);
+        alert("DRIVE ERROR: Failed to download text cartridge.");
+      } finally {
+        setIsUploading(false);
+      }
+    }
+  };
+
+  const handleDriveIngest = () => {
     if (!user) {
         alert("Authentication required.");
         return;
     }
+
+    if (!pickerInited || !user.token) {
+        alert("System initializing... please wait or re-login.");
+        return;
+    }
+
+    const view = new window.google.picker.View(window.google.picker.ViewId.DOCS);
+    view.setMimeTypes("text/plain,application/vnd.google-apps.document");
     
+    const picker = new window.google.picker.PickerBuilder()
+        .enableFeature(window.google.picker.Feature.NAV_HIDDEN)
+        .setAppId("418202563769") // Project ID from config
+        .setOAuthToken(user.token)
+        .addView(view)
+        .addView(new window.google.picker.DocsUploadView())
+        .setCallback(handleDriveSelect)
+        .build();
+    
+    picker.setVisible(true);
+  };
+
+  const handleLocalIngest = async (file: File) => {
     setIsUploading(true);
     try {
-        const newBook = await uploadBook(file);
-        setBooks(prev => [...prev, newBook]);
-        alert(`INGESTION COMPLETE: ${newBook.title}`);
+      const newBook = await uploadBook(file);
+      setBooks(prev => [...prev, newBook]);
+      alert(`INGESTION COMPLETE: ${newBook.title}`);
     } catch (error) {
-        console.error("Ingestion failed", error);
-        alert("INGESTION ERROR: Failed to process text cartridge.");
+      console.error("Local Upload Failed", error);
+      alert("UPLOAD ERROR: Failed to ingest local cartridge.");
     } finally {
-        setIsUploading(false);
+      setIsUploading(false);
     }
   };
 
@@ -122,7 +207,8 @@ function App() {
         <LibraryShelf 
           books={books} 
           onSelectBook={handleSelectBook}
-          onUpload={handleUpload}
+          onLocalIngest={handleLocalIngest}
+          onDriveIngest={handleDriveIngest}
           user={user}
           onLogin={() => login()} // Trigger the Google Login hook
           onMockLogin={handleMockLogin} // Trigger the Simulation Login
