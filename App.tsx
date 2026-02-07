@@ -5,6 +5,7 @@ import { LIBRARY_MANIFEST } from './constants';
 import { BookManifest, User } from './types';
 import { useGoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
+import { uploadBook } from './src/api';
 
 function App() {
   const [selectedBook, setSelectedBook] = useState<BookManifest | null>(null);
@@ -91,16 +92,26 @@ function App() {
     setSelectedBook(null);
   }
 
-  const handleUpload = () => {
+  const [books, setBooks] = useState<BookManifest[]>(LIBRARY_MANIFEST);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleUpload = async (file: File) => {
     if (!user) {
         alert("Authentication required.");
         return;
     }
     
-    // Future Implementation:
-    // With user.token (AccessToken), we can now use the Google Drive Picker API 
-    // or list files via the Drive REST API directly.
-    alert(`G-DRIVE UPLINK ACTIVE.\nUser: ${user.email}\nScope: https://www.googleapis.com/auth/drive.readonly\n\n[System Ready for File Selection Implementation]`);
+    setIsUploading(true);
+    try {
+        const newBook = await uploadBook(file);
+        setBooks(prev => [...prev, newBook]);
+        alert(`INGESTION COMPLETE: ${newBook.title}`);
+    } catch (error) {
+        console.error("Ingestion failed", error);
+        alert("INGESTION ERROR: Failed to process text cartridge.");
+    } finally {
+        setIsUploading(false);
+    }
   };
 
   return (
@@ -109,13 +120,14 @@ function App() {
         <BookReader book={selectedBook} user={user} onClose={handleCloseBook} />
       ) : (
         <LibraryShelf 
-          books={LIBRARY_MANIFEST} 
+          books={books} 
           onSelectBook={handleSelectBook}
           onUpload={handleUpload}
           user={user}
           onLogin={() => login()} // Trigger the Google Login hook
           onMockLogin={handleMockLogin} // Trigger the Simulation Login
           onLogout={handleLogout}
+          isUploading={isUploading}
         />
       )}
     </div>

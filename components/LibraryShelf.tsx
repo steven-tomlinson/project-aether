@@ -6,21 +6,34 @@ import { Terminal, Cpu, Database, Plus, LogIn, LogOut, HardDrive, User as UserIc
 interface LibraryShelfProps {
   books: BookManifest[];
   onSelectBook: (book: BookManifest) => void;
-  onUpload: () => void;
+  onUpload: (file: File) => void;
   user: User | null;
   onLogin: () => void;
   onMockLogin: () => void; // New prop for dev bypass
   onLogout: () => void;
+  isUploading?: boolean;
 }
 
-const LibraryShelf: React.FC<LibraryShelfProps> = ({ books, onSelectBook, onUpload, user, onLogin, onMockLogin, onLogout }) => {
+const LibraryShelf: React.FC<LibraryShelfProps> = ({ books, onSelectBook, onUpload, user, onLogin, onMockLogin, onLogout, isUploading = false }) => {
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (file) {
+          onUpload(file);
+      }
+      // Reset input
+      if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+      }
+  };
   
   const handleIngestClick = () => {
     if (!user) {
       alert("ACCESS DENIED: Authentication Required for Deep Archive Ingestion.\nPlease sign in with Google Identity.");
       onLogin();
     } else {
-      onUpload();
+      fileInputRef.current?.click();
     }
   };
 
@@ -111,10 +124,11 @@ const LibraryShelf: React.FC<LibraryShelfProps> = ({ books, onSelectBook, onUplo
 
             <button 
               onClick={handleIngestClick}
-              className="hidden sm:flex items-center gap-2 px-4 py-2 bg-aether-amber/10 border border-aether-amber/50 hover:bg-aether-amber hover:text-black transition-all text-xs font-mono uppercase tracking-widest group text-aether-amber"
+              disabled={isUploading}
+              className={`hidden sm:flex items-center gap-2 px-4 py-2 bg-aether-amber/10 border border-aether-amber/50 hover:bg-aether-amber hover:text-black transition-all text-xs font-mono uppercase tracking-widest group text-aether-amber ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              <Plus size={14} className="group-hover:rotate-90 transition-transform" />
-              Ingest
+              <Plus size={14} className={`group-hover:rotate-90 transition-transform ${isUploading ? 'animate-spin' : ''}`} />
+              {isUploading ? 'VIBE_CODING...' : 'Ingest'}
             </button>
           </div>
         </div>
@@ -160,6 +174,13 @@ const LibraryShelf: React.FC<LibraryShelfProps> = ({ books, onSelectBook, onUplo
           AWAITING INPUT...
         </div>
       </footer>
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleFileChange} 
+        className="hidden" 
+        accept=".txt,.md" 
+      />
     </div>
   );
 };
