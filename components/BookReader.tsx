@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BookManifest, ReaderContent, User, Scene } from '../types';
 import { X, Zap, Cpu, ScanLine, AlertTriangle, ChevronRight, Music, Image as ImageIcon, Loader2 } from 'lucide-react';
-import { GoogleGenAI, Type } from "@google/genai";
+import { geminiService } from '../services/GeminiService';
 import VideoPreview from './VideoPreview';
 import NarrativeAudio from './NarrativeAudio';
 
@@ -41,51 +41,43 @@ const BookReader: React.FC<BookReaderProps> = ({ book, user, onClose }) => {
       setStatus('generating');
       addLog("SYNCING_WITH_AETHER_GRID...");
       
-      try {
-        const apiKey = process.env.API_KEY || (window as any).GEMINI_API_KEY;
-        if (!apiKey || apiKey === "undefined") {
-            addLog("NEURAL_LINK_FAILED: NULL_KEY");
-            throw new Error("API Key missing or invalid");
+      // try { // Removed outer try to allow resilient fallback flow
+      
+        // Vite uses import.meta.env for env vars usually, but we configured define in vite.config.ts
+        // to map process.env.GEMINI_API_KEY.
+        const apiKey = (process.env as any).VITE_GEMINI_API_KEY || (process.env as any).GEMINI_API_KEY || (window as any).GEMINI_API_KEY;
+        if (!apiKey) {
+            console.error("API Key not found. Checked VITE_GEMINI_API_KEY, GEMINI_API_KEY and window.GEMINI_API_KEY");
+             addLog("SYSTEM_ERROR: API_KEY_MISSING");
+             addLog("FAILOVER_TO_MOCK_PROTOCOL");
+             setScenes([
+               { id: 0, heading: "The Awakening", text: "The stasis pod hissed...", imagePrompt: "Pod opening", audioMood: "Tens" },
+               { id: 1, heading: "First Light", text: "He stepped onto the chrome...", imagePrompt: "Chrome world", audioMood: "Awe" }
+             ]);
+             setStatus('ready');
+             return;
         }
-        const genAI = new GoogleGenAI({ apiKey });
+      // Use GeminiService for resilient content generation
+      try {
+          addLog("ATTEMPTING_NEURAL_LINK...");
+          const newScenes = await geminiService.generateBookContent(book, 0, 3);
+          
+          if (!newScenes || newScenes.length === 0) {
+              throw new Error("No content generated");
+          }
 
-        const prompt = `Act as an archivist for Project Aether. Retrieve the first 3 sections of the book "${book.title}" by ${book.author}. 
-        Return JSON per scene: { id, heading, text, imagePrompt, audioMood }`;
-
-        const result = await genAI.models.generateContent({
-           model: "gemini-1.5-flash",
-           contents: [{ role: 'user', parts: [{ text: prompt }] }],
-           config: {
-             responseMimeType: "application/json",
-             responseSchema: {
-               type: Type.ARRAY,
-               items: {
-                 type: Type.OBJECT,
-                 properties: {
-                   id: { type: Type.NUMBER },
-                   heading: { type: Type.STRING },
-                   text: { type: Type.STRING },
-                   imagePrompt: { type: Type.STRING },
-                   audioMood: { type: Type.STRING }
-                 }
-               }
-             }
-           }
-        });
-
-        const data = JSON.parse(result.candidates?.[0]?.content?.parts?.[0]?.text || "[]");
-        setScenes(data);
-        setStatus('ready');
-        addLog(`NARRATIVE_BUFFERED_${data.length}_SECTIONS`);
-      } catch (e) {
-        console.error(e);
-        addLog("SYSTEM_ERROR: FAILOVER_TO_MOCK");
-        // Fallback mock
-        setScenes([
-          { id: 0, heading: "The Awakening", text: "The stasis pod hissed...", imagePrompt: "Pod opening", audioMood: "Tens" },
-          { id: 1, heading: "First Light", text: "He stepped onto the chrome...", imagePrompt: "Chrome world", audioMood: "Awe" }
-        ]);
-        setStatus('ready');
+          setScenes(newScenes);
+          setStatus('ready');
+          addLog(`NARRATIVE_BUFFERED_${newScenes.length}_SECTIONS`);
+      } catch (e: any) {
+          console.error("Content generation failed:", e);
+          addLog("SYSTEM_ERROR: LINK_FAILED");
+          // Initialize with mock fallback if service fails entirely
+          setScenes([
+               { id: 0, heading: "The Awakening", text: "The stasis pod hissed...", imagePrompt: "Pod opening", audioMood: "Tens" },
+               { id: 1, heading: "First Light", text: "He stepped onto the chrome...", imagePrompt: "Chrome world", audioMood: "Awe" }
+          ]);
+          setStatus('ready');
       }
     };
 
@@ -158,25 +150,21 @@ const BookReader: React.FC<BookReaderProps> = ({ book, user, onClose }) => {
     generateMedia();
   }, [activeSceneId, status, book.id]);
 
-  // Placeholder for Lazy Loading Trigger
+  // Lazy Loading Trigger (Refactored to use Service)
   const handleLoadMore = async () => {
     if (status === 'generating') return;
     addLog("REQUESTING_NEXT_DATA_PARCEL...");
-    // Logic to fetch next 3 scenes starting from scenes.length
+    
     try {
-        if (!process.env.API_KEY) throw new Error("API Key missing");
-        const genAI = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const lastId = scenes.length - 1;
-        const prompt = `Continue the archive for "${book.title}". Provide sections starting AFTER scene id ${lastId}. Return 3 sections.`;
+        const lastId = scenes.length > 0 ? scenes[scenes.length - 1].id + 1 : 0;
+        const newScenes = await geminiService.generateBookContent(book, lastId, 3);
         
-        const result = await genAI.models.generateContent({
-            model: "gemini-1.5-flash",
-            contents: [{ role: 'user', parts: [{ text: prompt }] }]
-        });
-        
-        const nextData = JSON.parse(result.candidates?.[0]?.content?.parts?.[0]?.text || "[]");
-        setScenes(prev => [...prev, ...nextData]);
-        addLog(`SEQUENCE_EXTENDED_${nextData.length}_UNITS`);
+        if (newScenes && newScenes.length > 0) {
+             setScenes(prev => [...prev, ...newScenes]);
+             addLog(`SEQUENCE_EXTENDED_${newScenes.length}_UNITS`);
+        } else {
+             addLog("END_OF_ARCHIVE_REACHED");
+        }
     } catch (e) {
         addLog("LINK_TIMEOUT_RETRYING...");
     }

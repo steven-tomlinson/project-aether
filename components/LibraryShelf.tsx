@@ -13,6 +13,7 @@ interface LibraryShelfProps {
   onMockLogin: () => void; // New prop for dev bypass
   onLogout: () => void;
   isUploading?: boolean;
+  syncStatus?: 'idle' | 'syncing' | 'synced' | 'error';
 }
 
 const LibraryShelf: React.FC<LibraryShelfProps> = ({ 
@@ -24,7 +25,8 @@ const LibraryShelf: React.FC<LibraryShelfProps> = ({
   onLogin, 
   onMockLogin, 
   onLogout, 
-  isUploading = false 
+  isUploading = false,
+  syncStatus = 'idle'
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isIngestMenuOpen, setIsIngestMenuOpen] = useState(false);
@@ -237,7 +239,9 @@ const LibraryShelf: React.FC<LibraryShelfProps> = ({
         <div className="flex gap-4">
           <span>MEM: 64KB OK</span>
           <span>GEMINI-3: CONNECTED</span>
-          {user && <span className="text-aether-amber">G-DRIVE: MOUNTED</span>}
+          {user && <span className={`${syncStatus === 'syncing' ? 'animate-pulse text-blue-400' : 'text-aether-amber'}`}>
+            G-DRIVE: {syncStatus.toUpperCase()}
+          </span>}
         </div>
         <div className="animate-pulse text-aether-amber opacity-50">
           AWAITING INPUT...

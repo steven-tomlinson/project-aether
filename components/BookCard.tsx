@@ -1,6 +1,7 @@
 import React from 'react';
 import { BookManifest } from '../types';
-import { Disc, BookOpen, Clock } from 'lucide-react';
+import { Disc, BookOpen, Clock, RefreshCw } from 'lucide-react';
+import { geminiService } from '../services/GeminiService';
 
 interface BookCardProps {
   book: BookManifest;
@@ -8,6 +9,37 @@ interface BookCardProps {
 }
 
 const BookCard: React.FC<BookCardProps> = ({ book, onClick }) => {
+  const [currentCover, setCurrentCover] = React.useState(book.coverImage);
+  const [isRegenerating, setIsRegenerating] = React.useState(false);
+
+  // Sync with prop updates
+  React.useEffect(() => {
+    setCurrentCover(book.coverImage);
+  }, [book.coverImage]);
+
+  const handleRegenerate = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isRegenerating) return;
+
+    setIsRegenerating(true);
+    try {
+        // 1. Generate Prompt (Reasoning Tier)
+        const prompt = await geminiService.generateCoverPrompt(book);
+        console.log("[BookCard] Generated Prompt:", prompt);
+
+        // 2. Generate Image (Visual Tier)
+        const newUrl = await geminiService.generateImage(prompt, book.id);
+        
+        if (newUrl) {
+            setCurrentCover(newUrl);
+        }
+    } catch (err) {
+        console.error("Failed to regenerate cover:", err);
+    } finally {
+        setIsRegenerating(false);
+    }
+  };
+
   return (
     <div 
       onClick={() => onClick(book)}
@@ -20,21 +52,31 @@ const BookCard: React.FC<BookCardProps> = ({ book, onClick }) => {
       </div>
 
       {/* Image Container */}
-      <div className="relative aspect-[2/3] w-full overflow-hidden bg-black">
+      <div className="relative aspect-[2/3] w-full overflow-hidden bg-black group-image">
         <img 
-          src={book.coverImage} 
+          src={currentCover} 
           alt={book.title} 
-          className="w-full h-full object-cover opacity-60 grayscale transition-all duration-500 group-hover:grayscale-0 group-hover:opacity-90 group-hover:scale-105"
+          className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-105 ${isRegenerating ? 'opacity-30 blur-sm animate-pulse' : 'opacity-60 grayscale group-hover:grayscale-0 group-hover:opacity-90'}`}
         />
         
         {/* Overlay Grid */}
         <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.4)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%] pointer-events-none"></div>
         
         {/* Hover Action Overlay */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/60 backdrop-blur-sm">
+        <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/60 backdrop-blur-sm gap-3">
            <div className="border border-aether-amber text-aether-amber px-6 py-2 font-mono text-sm tracking-widest hover:bg-aether-amber hover:text-black transition-colors">
              INIT_SEQUENCE
            </div>
+           
+           {/* REGENERATE COVER BUTTON */}
+           <button 
+             onClick={handleRegenerate}
+             disabled={isRegenerating}
+             className="text-[10px] font-mono text-zinc-400 hover:text-white flex items-center gap-1 disabled:opacity-50"
+           >
+              <RefreshCw size={12} className={isRegenerating ? "animate-spin" : ""} /> 
+              {isRegenerating ? "RE-IMAGING..." : "REFRESH_VISUAL"}
+           </button>
         </div>
       </div>
 

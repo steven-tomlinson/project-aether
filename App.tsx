@@ -6,10 +6,14 @@ import { BookManifest, User } from './types';
 import { useGoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
 import { uploadBook } from './src/api';
+import { GoogleDriveService } from './services/GoogleDriveService';
+import SeedingControls from './components/SeedingControls';
 
 function App() {
   const [selectedBook, setSelectedBook] = useState<BookManifest | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [driveService, setDriveService] = useState<GoogleDriveService | null>(null);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
 
   // Persist User Session
   useEffect(() => {
@@ -60,9 +64,37 @@ function App() {
     },
     // Explicitly set flow to implicit to avoid confusion in dynamic environments
     flow: 'implicit',
-    // Request scope for reading files (future proofing for "Ingest" feature)
-    scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/documents.readonly profile email' 
+    // Request scope for reading files and App Data (for Library persistence)
+    scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.metadata.readonly profile email' 
   });
+
+  // Init Drive Service when User & Token are ready
+  useEffect(() => {
+    if (user?.token) {
+        const service = new GoogleDriveService(user.token);
+        setDriveService(service);
+        
+        // Initial Sync
+        const syncLibrary = async () => {
+            setSyncStatus('syncing');
+            try {
+                const cloudCatalog = await service.getCatalog();
+                if (cloudCatalog.length > 0) {
+                    console.log(`CLOUD_SYNC: Restored ${cloudCatalog.length} volumes.`);
+                    setBooks(cloudCatalog);
+                } else {
+                    console.log("CLOUD_SYNC: Initializing fresh archive...");
+                    await service.saveCatalog(LIBRARY_MANIFEST);
+                }
+                setSyncStatus('synced');
+            } catch (error) {
+                console.error("CLOUD_SYNC_FAILED", error);
+                setSyncStatus('error');
+            }
+        };
+        syncLibrary();
+    }
+  }, [user?.token]);
 
   // MOCK Login / Guest Access for Preview Environments
   const handleMockLogin = () => {
@@ -147,7 +179,18 @@ function App() {
         
         // Send to Ingestion Engine
         const newBook = await uploadBook(file);
-        setBooks(prev => [...prev, newBook]);
+        
+        const updatedBooks = [...books, newBook];
+        setBooks(updatedBooks);
+        
+        // Sync to Cloud
+        if (driveService) {
+            setSyncStatus('syncing');
+            await driveService.saveBook(newBook); // Backup individual
+            await driveService.saveCatalog(updatedBooks); // Update index
+            setSyncStatus('synced');
+        }
+
         alert(`INGESTION COMPLETE: ${newBook.title}`);
 
       } catch (error) {
@@ -189,7 +232,17 @@ function App() {
     setIsUploading(true);
     try {
       const newBook = await uploadBook(file);
-      setBooks(prev => [...prev, newBook]);
+      const updatedBooks = [...books, newBook];
+      setBooks(updatedBooks);
+
+      // Sync to Cloud
+      if (driveService) {
+        setSyncStatus('syncing');
+        await driveService.saveBook(newBook);
+        await driveService.saveCatalog(updatedBooks);
+        setSyncStatus('synced');
+      }
+
       alert(`INGESTION COMPLETE: ${newBook.title}`);
     } catch (error) {
       console.error("Local Upload Failed", error);
@@ -214,8 +267,10 @@ function App() {
           onMockLogin={handleMockLogin} // Trigger the Simulation Login
           onLogout={handleLogout}
           isUploading={isUploading}
+          syncStatus={syncStatus}
         />
       )}
+      <SeedingControls driveService={driveService} />
     </div>
   );
 }
