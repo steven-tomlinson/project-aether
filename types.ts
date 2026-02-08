@@ -15,7 +15,7 @@ export interface Scene {
   imagePrompt: string;
   audioMood: string;
   generatedImageUrl?: string;
-  generatedAudioUrl?: string;
+  generatedAudioUrl?: string; // New: per-page audio
 }
 
 export interface ReaderContent {

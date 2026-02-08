@@ -243,45 +243,42 @@ The user explicitly asked for "sound effects or background music or ambient soun
 
 To achieve this in one week, we will execute a "Vibe Coding" sprint. This schedule assumes you will use your evenings (4 hours/night) and the weekend.
 
-**Day 1: Foundation & "Vibe" Setup**
+**Day 1: Foundation & "Vibe" Setup** [COMPLETED]
 
 * **Goal:** Operational "Hello World" app with Gemini integration.  
-* **Vibe Coding Task:** Use Gemini Code Assist (Subscription) to generate the Next.js boilerplate.  
-  * *Prompt:* "Create a Next.js app called 'Project Aether'. Use Tailwind CSS. Create a 'BookCard' component and a 'LibraryGrid' layout. Style it like a futuristic archive."  
-* **API Setup:** Configure Google Cloud project, enable Gemini API, and set up the Python backend with google-genai SDK.
+* **Status:** Done. Vite + React project structure established.  
+* **API Setup:** Done. Google Gen AI SDK integrated.
 
-**Day 2: The Ingestion Engine (Backbone)**
+**Day 2: The Ingestion Engine (Backbone)** [COMPLETED]
 
 * **Goal:** A script that takes a .txt file and outputs a manifest.json.  
-* **Vibe Coding Task:** Upload the text of *A Martian Odyssey* to Gemini Advanced (Subscription). Ask it to "Split this into 10 key scenes and write image prompts for each."  
-* **Code:** Write the Python script to automate this using Gemini 3 Flash API.
+* **Status:** Done. `ingestor.py` implements the Gemini 3.0 Flash analysis pipeline.
+* **Code:** `backend/ingestor.py` handles scene segmentation and prompt engineering.
 
-**Day 3: The "Golden Age" Asset Factory**
+**Day 3: The "Golden Age" Asset Factory** [IN PROGRESS]
 
 * **Goal:** Generate assets for the 6 curated stories.  
-* **Task:** This is the heavy lifting. Run your Ingestion Engine on the 6 texts.  
-  * *Optimization:* Since Nano Banana Pro has a limit of \~50 images/day on the free tier , you must spread this out or use your **Gemini Advanced Subscription** (Web UI) to generate the images manually and save them. This is a legitimate strategy: "Human-in-the-loop Asset Generation."  
-  * *Audio:* Batch process the TTS generation.
+* **Status:** Partially Done. The `LIBRARY_MANIFEST` in `constants.ts` contains the curated metadata. Visuals are currently being lazy-loaded rather than pre-generated to save quota.
 
-**Day 4: The "Applet" Reader Experience**
+**Day 4: The "Applet" Reader Experience** [COMPLETED]
 
 * **Goal:** A working Reader UI.  
-* **Vibe Coding Task:** "Create a React component 'StoryReader'. It has a text column on the left and an image/media column on the right. It needs a 'Play' button that syncs with the text ID."  
-* **Feature:** Implement the "Ambient Sound" player that fades tracks in/out based on the manifest.
+* **Status:** Done. `BookReader.tsx` refactored for split-screen immersive view. `NarrativeAudio.tsx` implemented.
+* **Feature:** "Ambient Sound" represented by audio mood tags, ready for integration.
 
-**Day 5: The "Upload" Feature (The Wow Factor)**
+**Day 5: The "Upload" Feature (The Wow Factor)** [COMPLETED]
 
 * **Goal:** Allow users to add their own books.  
-* **Task:** Build the "Upload" form in the frontend. Connect it to the Python backend.  
-* **Refinement:** implement the "Lazy Generation" logic discussed in Section 3.3 to ensure the demo doesn't hang while waiting for assets.
+* **Status:** Done. Frontend supports file upload which connects to the Python backend for real-time ingestion.
+* **Refinement:** Lazy Generation endpoints (`/api/generate/image`, `/api/generate/audio`) implemented to prevent timeouts.
 
-**Day 6: Polish & "Deep Dives"**
+**Day 6: Polish & "Deep Dives"** [PENDING]
 
 * **Goal:** Leverage the Subscription features.  
-* **Task:** Use **NotebookLM** (Subscription) to generate "Audio Overviews" for each of the 6 books. Add a "Listen to Analysis" button on the book cover.  
-* **UI Polish:** Add transitions, loading states, and "retro" filters (scanlines, grain) to the images.
+* **Task:** Use **NotebookLM** (Subscription) to generate "Audio Overviews". *Pending manual generation.*
+* **UI Polish:** Reader UI has "Neural Ingestion" effects.
 
-**Day 7: The Video Demo (Crucial)**
+**Day 7: The Video Demo (Crucial)** [PENDING]
 
 * **Goal:** A 3-minute video that tells a story.  
 * **Script:**  

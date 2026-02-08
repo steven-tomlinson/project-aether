@@ -32,29 +32,26 @@ const VideoPreview: React.FC<VideoPreviewProps> = ({ book, onVideoGenerated, exi
         }
       }
 
-      // Re-instantiate AI with the (potentially new) key
-      if (!process.env.API_KEY) throw new Error("API Key not found in environment");
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
       // 2. Generate Prompt using Flash
       addLog("SYNTHESIZING_SCENE_DATA...");
+      const genAI = new GoogleGenAI({ apiKey: process.env.API_KEY! });
       const summaryPrompt = `Create a highly detailed visual prompt for a 5-second cinematic video trailer for the book "${book.title}". 
       Description: ${book.description}. 
       Style keywords: ${book.tags.join(', ')}, ${book.theme.backgroundStyle}.
       Output strictly the prompt text only. No explanations.`;
 
-      const promptResp = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: summaryPrompt
+      const promptResp = await genAI.models.generateContent({
+        model: 'gemini-1.5-flash',
+        contents: [{ role: 'user', parts: [{ text: summaryPrompt }] }]
       });
-      const veoPrompt = promptResp.text || `Cinematic trailer for ${book.title}, sci-fi, retro-future`;
+      const veoPrompt = promptResp.candidates?.[0]?.content?.parts?.[0]?.text || `Cinematic trailer for ${book.title}, sci-fi, retro-future`;
       addLog("VEO_PROMPT_LOCKED.");
 
       // 3. Generate Video using Veo
       addLog("INITIATING_HOLOGRAPHIC_RENDER...");
       let operation;
       try {
-        operation = await ai.models.generateVideos({
+        operation = await genAI.models.generateVideos({
             model: 'veo-3.1-fast-generate-preview',
             prompt: veoPrompt,
             config: {
@@ -83,7 +80,7 @@ const VideoPreview: React.FC<VideoPreviewProps> = ({ book, onVideoGenerated, exi
       while (!operation.done) {
         await new Promise(resolve => setTimeout(resolve, 5000)); // Poll every 5s
         addLog("PROCESSING_CHUNKS...");
-        operation = await ai.operations.getVideosOperation({ operation: operation });
+        operation = await genAI.operations.getVideosOperation({ operation: operation });
       }
 
       // 5. Fetch Result

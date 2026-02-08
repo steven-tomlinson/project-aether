@@ -15,6 +15,7 @@ origins = [
     "http://127.0.0.1:5173",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:3001",
 ]
 
 app.add_middleware(
@@ -76,3 +77,21 @@ async def ingest_book(file: UploadFile = File(...)):
         
     manifest = process_book_content(file.filename, text_content)
     return manifest
+
+class GenerationRequest(BaseModel):
+    book_id: str
+    scene_id: int
+    prompt: str
+    voice: Optional[str] = "Aoede"
+
+from ingestor import generate_image_for_scene, generate_audio_for_scene
+
+@app.post("/api/generate/image")
+async def generate_image(req: GenerationRequest):
+    url = generate_image_for_scene(req.book_id, req.scene_id, req.prompt)
+    return {"url": url}
+
+@app.post("/api/generate/audio")
+async def generate_audio(req: GenerationRequest):
+    url = generate_audio_for_scene(req.book_id, req.scene_id, req.prompt, req.voice)
+    return {"url": url}
