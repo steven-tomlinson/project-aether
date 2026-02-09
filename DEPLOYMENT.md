@@ -9,7 +9,7 @@ We are using a **Unified Container** strategy.
 -   **Entrypoint**: `Dockerfile` in the project root.
 
 ## Prerequisites
-1.  **Google Cloud Project**: Ensure you have a project created (e.g., `project-aether-hackathon`).
+1.  **Google Cloud Project**: Ensure you have a project created (e.g., `project-aether-486817`).
 2.  **APIs Enabled**: Cloud Run API, Artifact Registry API.
 3.  **gcloud CLI**: Installed and authenticated on your local machine.
 

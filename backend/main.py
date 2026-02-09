@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import os
@@ -75,7 +76,7 @@ class BookManifest(BaseModel):
 async def root():
     return {"message": "Project Aether Backend Online"}
 
-from ingestor import process_book_content
+from backend.ingestor import process_book_content
 
 @app.post("/api/ingest", response_model=BookManifest)
 async def ingest_book(file: UploadFile = File(...)):
@@ -95,7 +96,7 @@ class GenerationRequest(BaseModel):
     prompt: str
     voice: Optional[str] = "Aoede"
 
-from ingestor import generate_image_for_scene, generate_audio_for_scene
+from backend.ingestor import generate_image_for_scene, generate_audio_for_scene
 
 @app.post("/api/generate/image")
 async def generate_image(req: GenerationRequest):
