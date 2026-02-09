@@ -15,20 +15,20 @@ if (!rootElement) {
 // 3. COPY that Client ID and paste it below.
 // 4. Ensure "Authorized JavaScript origins" matches your current URL exactly.
 // ------------------------------------------------------------------
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID_HERE"; 
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "project-aether-486817";
 
 // HELPER: This component displays the exact URL you need to add to Google Cloud Console
 const ConfigHelper = () => {
   const origin = window.location.origin;
-  
+
   if (GOOGLE_CLIENT_ID === "YOUR_GOOGLE_CLIENT_ID_HERE") {
     return (
       <div style={{
-        position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.9)', 
+        position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.9)',
         color: '#ffb000', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         fontFamily: 'monospace', textAlign: 'center', padding: '20px'
       }}>
-        <h1 style={{fontSize: '24px', marginBottom: '20px'}}>⚠️ SETUP REQUIRED</h1>
+        <h1 style={{ fontSize: '24px', marginBottom: '20px' }}>⚠️ SETUP REQUIRED</h1>
         <p>You must open <code>index.tsx</code> and replace <code>YOUR_GOOGLE_CLIENT_ID_HERE</code> with your actual Client ID.</p>
       </div>
     );
@@ -36,7 +36,7 @@ const ConfigHelper = () => {
 
   // Only show origin helper if we are in dev/preview
   if (process.env.NODE_ENV === 'production' && !origin.includes('webcontainer') && !origin.includes('stackblitz')) {
-     return null;
+    return null;
   }
 
   return (
@@ -54,13 +54,13 @@ const ConfigHelper = () => {
       border: '1px solid #3f3f46',
       maxWidth: '300px'
     }}>
-      <div style={{marginBottom: '4px', color: '#ffb000'}}>GOOGLE CLOUD CONFIG:</div>
+      <div style={{ marginBottom: '4px', color: '#ffb000' }}>GOOGLE CLOUD CONFIG:</div>
       <div>Origin URL (Add to GCP):</div>
       <code style={{
-        display: 'block', 
-        background: 'black', 
-        padding: '4px', 
-        color: '#fff', 
+        display: 'block',
+        background: 'black',
+        padding: '4px',
+        color: '#fff',
         marginTop: '4px',
         wordBreak: 'break-all',
         userSelect: 'all'

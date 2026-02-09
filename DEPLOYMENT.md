@@ -13,9 +13,21 @@ We are using a **Unified Container** strategy.
 2.  **APIs Enabled**: Cloud Run API, Artifact Registry API.
 3.  **gcloud CLI**: Installed and authenticated on your local machine.
 
-## Step 1: Build & Submit Container
-Run this in your local terminal where you have `gcloud` access:
+## Step 1: Deploy (Windows)
+Run the provided PowerShell script. It will prompt you for your Project ID and Credentials.
 
+```powershell
+.\deploy.ps1
+```
+
+## Step 1: Deploy (Linux/Mac)
+Run the bash script:
+```bash
+./deploy.sh
+```
+
+## Manual Deployment (Reference)
+If you prefer to run commands manually:
 ```bash
 # Authenticate
 gcloud auth login
@@ -42,13 +54,13 @@ gcloud run deploy aether-app \
 *Note: Replace `[YOUR_GEMINI_KEY]` and `[YOUR_OAUTH_CLIENT_ID]` with your actual credentials.*
 
 ## Step 3: Map Custom Domain
-**Status:** `lockb0x.io` is VERIFIED.
+**Status:** `aether.musubipress.com` is VERIFIED.
 **Pending:** Waiting for Cloud Run to sync verification status.
 
 1.  Go to the **[Cloud Run Domain Mappings](https://console.cloud.google.com/run/domains?project=project-aether-486716)**.
 2.  Click **Add Mapping**.
 3.  Select Service: `aether-app`.
-4.  Select Domain: `lockb0x.io` (If not visible, wait 15-60 mins for sync).
+4.  Select Domain: `musubipress.com` (If not visible, wait 15-60 mins for sync).
 5.  Set Subdomain: `aether`.
 6.  **Action**: Google will display `A` and `AAAA` records.
 7.  **DNS Update**: Add these records to your Namecheap DNS for `aether`.

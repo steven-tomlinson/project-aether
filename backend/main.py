@@ -27,12 +27,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve React Static Files (Dist)
-# Check if static directory exists (Unified Docker Deployment)
-if os.path.exists("/app/static"):
-    app.mount("/", StaticFiles(directory="/app/static", html=True), name="static")
-elif os.path.exists("../dist"): # Local Dev Fallback
-    app.mount("/", StaticFiles(directory="../dist", html=True), name="static")
+# Static file mount moved to end of file to prevent blocking API routes
 
 @app.get("/api/health")
 async def health_check():
@@ -72,7 +67,7 @@ class BookManifest(BaseModel):
 
 # --- Endpoints ---
 
-@app.get("/")
+@app.get("/api")
 async def root():
     return {"message": "Project Aether Backend Online"}
 
@@ -107,3 +102,9 @@ async def generate_image(req: GenerationRequest):
 async def generate_audio(req: GenerationRequest):
     url = generate_audio_for_scene(req.book_id, req.scene_id, req.prompt, req.voice)
     return {"url": url}
+
+# Serve React Static Files (Dist) - Processed after API routes
+if os.path.exists("/app/static"):
+    app.mount("/", StaticFiles(directory="/app/static", html=True), name="static")
+elif os.path.exists("../dist"): # Local Dev Fallback
+    app.mount("/", StaticFiles(directory="../dist", html=True), name="static")
