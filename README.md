@@ -109,6 +109,7 @@ Project Aether is v1.0. The roadmap for v2.0 includes:
 2.  **Vector Search**: "Talk to your Library" using Gemini's long-context window to query the entire corpus.
 3.  **Community Cartridges**: A P2P operational mode to share "Vibe Coded" book manifests without copyright infringement.
 
+
 ---
 
 <div align="center">

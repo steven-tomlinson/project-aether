@@ -20,11 +20,22 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"], # Allow all for now to support localhost and cloud run
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Serve React Static Files (Dist)
+# Check if static directory exists (Unified Docker Deployment)
+if os.path.exists("/app/static"):
+    app.mount("/", StaticFiles(directory="/app/static", html=True), name="static")
+elif os.path.exists("../dist"): # Local Dev Fallback
+    app.mount("/", StaticFiles(directory="../dist", html=True), name="static")
+
+@app.get("/api/health")
+async def health_check():
+    return {"status": "ok"}
 
 # --- Pydantic Models (Mirroring Frontend Types) ---
 
