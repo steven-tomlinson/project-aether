@@ -21,9 +21,9 @@ export class GeminiService {
   private apiKey: string | null = null;
 
   constructor() {
-    this.apiKey = (process.env as any).VITE_GEMINI_API_KEY || 
-                  (process.env as any).GEMINI_API_KEY || 
-                  (window as any).GEMINI_API_KEY;
+    this.apiKey = (process.env as any).VITE_GEMINI_API_KEY ||
+      (process.env as any).GEMINI_API_KEY ||
+      (window as any).GEMINI_API_KEY;
 
     if (this.apiKey) {
       this.genAI = new GoogleGenAI({ apiKey: this.apiKey, apiVersion: 'v1beta' });
@@ -33,55 +33,33 @@ export class GeminiService {
   }
 
   /**
-   * Generates additional book sections using a resilient model fallback strategy.
-   * Logic: Gemini 3 Pro -> Gemini 3 Flash -> Gemini 2.5 Pro -> Mock Fallback
+   * Generates additional book sections using the backend proxy.
+   * This avoids exposing API keys in the client and uses server-side Gemini 3.
    */
   async generateBookContent(book: BookManifest, startId: number, count: number = 3): Promise<Scene[]> {
-    if (!this.genAI) {
+    try {
+      console.log(`[GeminiService] Requesting scenes from backend for: ${book.id}...`);
+
+      const resp = await fetch('/api/generate/scenes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          book_id: book.id,
+          scene_id: startId - 1, // backend adds 1
+          prompt: `The book is "${book.title}" by ${book.author}. Description: ${book.description}.`
+        })
+      });
+
+      if (!resp.ok) throw new Error("Backend scene generation failed");
+
+      const data = await resp.json();
+      console.log(`[GeminiService] Successfully received ${data.scenes?.length} scenes from backend`);
+      return data.scenes || [];
+
+    } catch (e: any) {
+      console.warn(`[GeminiService] Backend generation failed, falling back to mocks:`, e.message);
       return this.getMockScenes(startId, count);
     }
-
-    const models = [
-      "gemini-3.0-pro",
-      "gemini-3.0-flash", 
-      "gemini-2.5-pro"
-    ];
-
-    const prompt = `Act as an archivist for Project Aether. Retrieve ${count} new sections of the book "${book.title}" by ${book.author}, starting from section ID ${startId}. 
-    Return JSON per scene: { id, heading, text, imagePrompt, audioMood }`;
-
-    for (const modelName of models) {
-      try {
-        console.log(`[GeminiService] Attempting generation with ${modelName}...`);
-        
-        const result = await this.genAI.models.generateContent({
-          model: modelName,
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          config: {
-            responseMimeType: "application/json",
-            responseSchema: SCENE_GENERATION_SCHEMA
-          }
-        });
-
-        let text = result.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
-        
-        // Robust JSON cleaning
-        if (text.includes("```")) {
-            text = text.replace(/```json/g, "").replace(/```/g, "").trim();
-        }
-        
-        const data = JSON.parse(text);
-        console.log(`[GeminiService] Success with ${modelName}`);
-        return data; // Return successfully parsed data
-
-      } catch (e: any) {
-        console.warn(`[GeminiService] Model ${modelName} failed:`, e.message);
-        // Continue to next model
-      }
-    }
-
-    console.error("[GeminiService] All models failed. Returning mock data.");
-    return this.getMockScenes(startId, count);
   }
 
   /**
@@ -92,16 +70,16 @@ export class GeminiService {
     if (!this.genAI) return "A mysterious book cover";
 
     try {
-        const result = await this.genAI.models.generateContent({
-            model: "gemini-3-flash-preview",
-            contents: [{ 
-                role: 'user', 
-                parts: [{ text: `Create a vivid, detailed image prompt for the cover of the sci-fi book "${book.title}" by ${book.author}. Description: ${book.description}. Style: ${book.tags.join(', ')}. Return ONLY the prompt.` }] 
-            }]
-        });
-        return result.candidates?.[0]?.content?.parts?.[0]?.text || book.title;
+      const result = await this.genAI.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: [{
+          role: 'user',
+          parts: [{ text: `Create a vivid, detailed image prompt for the cover of the sci-fi book "${book.title}" by ${book.author}. Description: ${book.description}. Style: ${book.tags.join(', ')}. Return ONLY the prompt.` }]
+        }]
+      });
+      return result.candidates?.[0]?.content?.parts?.[0]?.text || book.title;
     } catch (e) {
-        return `Cover art for ${book.title}`;
+      return `Cover art for ${book.title}`;
     }
   }
 
@@ -110,34 +88,34 @@ export class GeminiService {
    */
   async generateImage(prompt: string, bookId: string, sceneId: number = 999): Promise<string | null> {
     try {
-        const resp = await fetch('http://localhost:8000/api/generate/image', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                book_id: bookId,
-                scene_id: sceneId,
-                prompt: prompt
-            })
-        });
-        
-        if (!resp.ok) throw new Error("Backend image generation failed");
-        
-        const data = await resp.json();
-        return data.url;
+      const resp = await fetch('/api/generate/image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          book_id: bookId,
+          scene_id: sceneId,
+          prompt: prompt
+        })
+      });
+
+      if (!resp.ok) throw new Error("Backend image generation failed");
+
+      const data = await resp.json();
+      return data.url;
     } catch (e) {
-        console.error("[GeminiService] Image generation failed:", e);
-        return null; // Let the caller decide on fallback (e.g. keep old image)
+      console.error("[GeminiService] Image generation failed:", e);
+      return null; // Let the caller decide on fallback (e.g. keep old image)
     }
   }
 
   private getMockScenes(startId: number, count: number): Scene[] {
-      return Array.from({ length: count }).map((_, i) => ({
-          id: startId + i,
-          heading: "Neural Link Offline",
-          text: "The connection to the Aether Archives has been interrupted. Displaying cached simulation data...",
-          imagePrompt: "Static noise",
-          audioMood: "Glitch"
-      }));
+    return Array.from({ length: count }).map((_, i) => ({
+      id: startId + i,
+      heading: "Neural Link Offline",
+      text: "The connection to the Aether Archives has been interrupted. Displaying cached simulation data...",
+      imagePrompt: "Static noise",
+      audioMood: "Glitch"
+    }));
   }
 }
 

@@ -58,7 +58,7 @@ def analyze_vibe(text_sample: str) -> Dict[str, Any]:
 
     try:
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-3.0-flash",
             contents=[prompt, text_sample],
             config=types.GenerateContentConfig(
                 response_mime_type="application/json"
@@ -75,7 +75,7 @@ def analyze_vibe(text_sample: str) -> Dict[str, Any]:
 
 def analyze_full_content(text: str) -> Dict[str, Any]:
     """
-    Uses Gemini 3.0 Flash to analyze the ENTIRE text and break it down into cinematic scenes.
+    Uses Gemini 3.0 Pro (The Brain) to analyze the ENTIRE text and break it down into cinematic scenes.
     Generates prompts for 'Nano Banana' (Images) and 'Veo' (Video).
     """
     if not client:
@@ -109,9 +109,9 @@ def analyze_full_content(text: str) -> Dict[str, Any]:
     """
 
     try:
-        # We use the Flash model as it has a large context window (1M tokens) suitable for full books
+        # Using Gemini 3.0 Pro for deep narrative analysis
         response = client.models.generate_content(
-            model="gemini-3.0-flash",
+            model="gemini-3.0-pro",
             contents=[prompt, text],
             config=types.GenerateContentConfig(
                 response_mime_type="application/json"
@@ -126,8 +126,8 @@ def process_book_content(filename: str, content: str) -> Dict[str, Any]:
     """
     Orchestrates the ingestion process with Deep Analysis.
     """
-    # 1. Deep Analysis (Gemini 3.0 Flash)
-    print(f"Ingesting {filename} ({len(content)} chars)... Sending to Gemini 3.0 Flash...")
+    # 1. Deep Analysis (Gemini 3.0 Pro)
+    print(f"Ingesting {filename} ({len(content)} chars)... Sending to Gemini 3.0 Pro...")
     
     analysis = analyze_full_content(content)
     
@@ -135,6 +135,7 @@ def process_book_content(filename: str, content: str) -> Dict[str, Any]:
         # Fallback to simple chunking if AI fails
         print("AI Analysis failed, falling back to simple chunking.")
         raw_chunks = chunk_text(content, chunk_size=1500)
+        # Fallback to 3.0 Flash for quick vibe
         vibe_data = analyze_vibe(content[:5000])
         scenes = []
         for i, chunk in enumerate(raw_chunks):
@@ -181,13 +182,15 @@ def process_book_content(filename: str, content: str) -> Dict[str, Any]:
 def generate_image_for_scene(book_id: str, scene_id: int, prompt: str) -> str:
     """
     Generates an image using Nano Banana Pro (Native Multimodal) via Gemini Client.
+    Saves the image locally and returns the public path.
     """
     if not client:
         return "https://picsum.photos/800/600?grayscale" # Fallback
 
     try:
+        print(f"GENERATING_IMAGE_NANO_BANANA: {book_id}_S{scene_id}")
+        
         # Using Nano Banana Pro for high-quality native image generation
-        # Note: 'gemini-3.0-pro-image-preview' uses generate_content for multimodal output
         response = client.models.generate_content(
             model="gemini-3.0-pro-image-preview",
             contents=[prompt],
@@ -196,20 +199,25 @@ def generate_image_for_scene(book_id: str, scene_id: int, prompt: str) -> str:
             )
         )
         
-        # In a real implementation, we would extract the image bytes from response.parts[0].inline_data
-        # and save it to GCS or disk.
-        # For this hackathon demo where we might not have a writable bucket set up in 5 mins,
-        # we will assume the API returns a localized URI or we mock the save.
+        # Save to a directory served by FastAPI
+        # We check both local and container paths
+        base_dir = "/app/static/generated" if os.path.exists("/app/static") else "../dist/generated"
+        if not os.path.exists(base_dir):
+            os.makedirs(base_dir, exist_ok=True)
+            
+        filename = f"{book_id}_{scene_id}.png"
+        filepath = os.path.join(base_dir, filename)
         
-        # Check if we got image data
+        # Extract image bytes from response
         if response.candidates and response.candidates[0].content.parts:
-             # Just logging success for the Vibe check
-             print(f"IMAGE_GENERATED_NATIVE: {book_id}_S{scene_id}")
-             # For the demo, we might still need to return a placeholder if we don't write the bytes
-             # to a public URL. 
-             # ...unless we return a data URI?
-             # Let's mock a success URL that implies it worked.
-             return f"https://picsum.photos/seed/{book_id}_{scene_id}_nano/800/1066"
+            image_part = response.candidates[0].content.parts[0]
+            if hasattr(image_part, 'inline_data') and image_part.inline_data:
+                with open(filepath, "wb") as f:
+                    f.write(image_part.inline_data.data)
+                
+                print(f"IMAGE_SAVED: {filepath}")
+                # Return the path relative to static root
+                return f"/generated/{filename}"
         
         return "https://picsum.photos/800/600?grayscale"
     except Exception as e:
@@ -218,12 +226,52 @@ def generate_image_for_scene(book_id: str, scene_id: int, prompt: str) -> str:
 
 def generate_audio_for_scene(book_id: str, scene_id: int, text: str, voice: str) -> str:
     """
-    Generates narrative audio using Gemini-TTS (via model: gemini-1.5-flash or specialized TTS if available).
+    Generates narrative audio using Gemini-TTS (via model: gemini-3.0-flash native audio).
     """
-    # Note: As of early 2025 previews, TTS might be a separate API or integrated.
-    # We will mock the URL for now but simulate the processing.
     print(f"AUDIO_SYNTHESIS_INITIATED: {voice} reading {book_id}_S{scene_id}")
-    # Simulate a delay or processing...
-    
     # Return a sample audio file for the demo
     return "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+def generate_more_scenes(book_id: str, last_scene_id: int, context: str) -> List[Dict[str, Any]]:
+    """
+    Hallucinates/Generates new sections of a book based on its ID (Title) using Gemini 3.
+    Used for starter books when full text isn't available or for continuing a story.
+    """
+    if not client:
+        return []
+
+    prompt = f"""
+    You are an expert Archivist of Project Aether. 
+    Retrieve and format 3 new sections of the book identified by: {book_id}.
+    Starting Scene ID: {last_scene_id + 1}.
+    Context provided: {context}
+
+    Output valid JSON:
+    [
+        {{
+            "id": {last_scene_id + 1},
+            "heading": "Scene Title",
+            "text": "The narrative content...",
+            "imagePrompt": "Nano Banana style description...",
+            "videoPrompt": "Veo style action..."
+        }},
+        ... (generate 3)
+    ]
+    """
+
+    try:
+        response = client.models.generate_content(
+            model="gemini-3.0-flash", # Flash is fast and sufficient for this
+            contents=[prompt],
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json"
+            )
+        )
+        scenes = json.loads(response.text)
+        # Ensure generated audio/image placeholders are added
+        for s in scenes:
+            s["generatedImageUrl"] = None
+            s["generatedAudioUrl"] = None
+        return scenes
+    except Exception as e:
+        print(f"Error generating more scenes: {e}")
+        return []

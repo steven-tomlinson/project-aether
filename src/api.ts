@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { BookManifest } from './types';
 
-const API_URL = 'http://localhost:8000/api';
+const API_URL = '/api';
 
 export const uploadBook = async (file: File): Promise<BookManifest> => {
   const formData = new FormData();

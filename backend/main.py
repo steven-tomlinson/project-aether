@@ -88,10 +88,17 @@ async def ingest_book(file: UploadFile = File(...)):
 class GenerationRequest(BaseModel):
     book_id: str
     scene_id: int
-    prompt: str
+    prompt: Optional[str] = None # For image/audio, it's the specific prompt. For scenes, it's context.
+    text: Optional[str] = None
     voice: Optional[str] = "Aoede"
 
-from backend.ingestor import generate_image_for_scene, generate_audio_for_scene
+from backend.ingestor import generate_image_for_scene, generate_audio_for_scene, generate_more_scenes
+
+@app.post("/api/generate/scenes")
+async def generate_scenes(req: GenerationRequest):
+    # This proxies the scene generation to the backend using the server-side API key
+    scenes = generate_more_scenes(req.book_id, req.scene_id, req.prompt or "Continue the story.")
+    return {"scenes": scenes}
 
 @app.post("/api/generate/image")
 async def generate_image(req: GenerationRequest):

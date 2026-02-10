@@ -15,7 +15,7 @@ if (!rootElement) {
 // 3. COPY that Client ID and paste it below.
 // 4. Ensure "Authorized JavaScript origins" matches your current URL exactly.
 // ------------------------------------------------------------------
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "project-aether-486817";
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID_HERE";
 
 // HELPER: This component displays the exact URL you need to add to Google Cloud Console
 const ConfigHelper = () => {
