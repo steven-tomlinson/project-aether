@@ -51,7 +51,7 @@ gcloud run deploy aether-app \
   --set-env-vars "VITE_GEMINI_API_KEY=[YOUR_GEMINI_KEY],GOOGLE_CLIENT_ID=[YOUR_OAUTH_CLIENT_ID]"
 ```
 
-*Note: Replace `[YOUR_GEMINI_KEY]` and `[YOUR_OAUTH_CLIENT_ID]` with your actual credentials.*
+*Note: Replace `[YOUR_GEMINI_KEY]` and `[YOUR_OAUTH__ID]` with your actual credentials.*
 
 ## Step 3: Map Custom Domain
 **Status:** `aether.musubipress.com` is VERIFIED.
