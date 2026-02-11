@@ -2,7 +2,7 @@
 import axios from 'axios';
 import { BookManifest } from '../types';
 
-const DRIVE_API = 'https://www.googleapis.com/drive/v3';
+const DRIVE_API = import.meta.env.DEV ? '/api/drive' : 'https://www.googleapis.com/drive/v3';
 const UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3/files';
 
 export class GoogleDriveService {

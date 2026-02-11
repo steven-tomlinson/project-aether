@@ -15,7 +15,16 @@ if (!rootElement) {
 // 3. COPY that Client ID and paste it below.
 // 4. Ensure "Authorized JavaScript origins" matches your current URL exactly.
 // ------------------------------------------------------------------
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID_HERE";
+// ------------------------------------------------------------------
+// DYNAMIC CLIENT ID SELECTION
+// ------------------------------------------------------------------
+const PROD_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "558552268704-mino3vnuca14jma9eoe3pvlmrl6qn197.apps.googleusercontent.com";
+const STAGING_CLIENT_ID = process.env.STAGING_CLIENT_ID;
+
+const isStaging = window.location.hostname.includes('aether-app-staging') || window.location.hostname.includes('staging');
+const GOOGLE_CLIENT_ID = (isStaging && STAGING_CLIENT_ID) ? STAGING_CLIENT_ID : PROD_CLIENT_ID;
+
+console.log(`AUTH_CONFIG: Using ${isStaging ? 'Staging' : 'Production'} Client ID`);
 
 // HELPER: This component displays the exact URL you need to add to Google Cloud Console
 const ConfigHelper = () => {

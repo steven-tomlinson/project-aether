@@ -1,7 +1,8 @@
-param(
-    [string]$ProjectID,
-    [string]$ApiKey,
-    [string]$OAuthId
+[string]$ProjectID,
+[string]$ApiKey,
+[string]$OAuthId,
+[string]$GoogleApiKey,
+[string]$StarterFolderId
 )
 
 $ErrorActionPreference = "Stop"
@@ -25,13 +26,15 @@ if (-not $ApiKey) {
         foreach ($line in $envContent) {
             if ($line -match "GEMINI_API_KEY=(.*)") { $ApiKey = $matches[1] }
             if ($line -match "GOOGLE_CLIENT_ID=(.*)") { $OAuthId = $matches[1] }
+            if ($line -match "VITE_GOOGLE_API_KEY=(.*)") { $GoogleApiKey = $matches[1] }
+            if ($line -match "VITE_STARTER_FOLDER_ID=(.*)") { $StarterFolderId = $matches[1] }
         }
     }
     if (-not $ApiKey) { $ApiKey = Read-Host "Enter your Gemini API Key" }
 }
-if (-not $OAuthId) { 
-    if (-not $OAuthId) { $OAuthId = Read-Host "Enter your Google Client ID (OAuth)" }
-}
+if (-not $OAuthId) { $OAuthId = Read-Host "Enter your Google Client ID (OAuth)" }
+if (-not $GoogleApiKey) { $GoogleApiKey = Read-Host "Enter your Google API Key (Drive)" }
+if (-not $StarterFolderId) { $StarterFolderId = Read-Host "Enter your Starter Folder ID" }
 
 $Region = "us-central1"
 $ServiceName = "aether-app"
@@ -51,7 +54,7 @@ if ($LASTEXITCODE -ne 0) {
 
 # 4. Deploy
 Write-Host "Deploying to Cloud Run..." -ForegroundColor Green
-$DeployCmd = "gcloud run deploy $ServiceName --image gcr.io/$ProjectID/$ServiceName --platform managed --region $Region --allow-unauthenticated --set-env-vars ""VITE_GEMINI_API_KEY=$ApiKey,GOOGLE_CLIENT_ID=$OAuthId"""
+$DeployCmd = "gcloud run deploy $ServiceName --image gcr.io/$ProjectID/$ServiceName --platform managed --region $Region --allow-unauthenticated --set-env-vars ""VITE_GEMINI_API_KEY=$ApiKey,GOOGLE_CLIENT_ID=$OAuthId,VITE_GOOGLE_API_KEY=$GoogleApiKey,VITE_STARTER_FOLDER_ID=$StarterFolderId"""
 Invoke-Expression $DeployCmd
 
 if ($LASTEXITCODE -ne 0) {

@@ -1,0 +1,11 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/aether-app-staging', '--build-arg', 'STAGING_CLIENT_ID=$_STAGING_CLIENT_ID', '--build-arg', 'VITE_GOOGLE_API_KEY=$_GOOGLE_API_KEY', '--build-arg', 'VITE_STARTER_FOLDER_ID=$_STARTER_FOLDER_ID', '.' ]
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/aether-app-staging']
+images:
+  - 'gcr.io/$PROJECT_ID/aether-app-staging'
+substitutions:
+  _STAGING_CLIENT_ID: ''
+  _GOOGLE_API_KEY: ''
+  _STARTER_FOLDER_ID: ''

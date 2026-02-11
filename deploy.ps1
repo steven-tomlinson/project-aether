@@ -40,6 +40,8 @@ if ($LASTEXITCODE -ne 0) {
 # Prompt for Secrets
 $ApiKey = Read-Host "Enter your Gemini API Key"
 $OAuthId = Read-Host "Enter your Google Client ID (OAuth)"
+$GoogleApiKey = Read-Host "Enter your Google API Key (Drive)"
+$StarterFolderId = Read-Host "Enter your Starter Folder ID"
 
 if ([string]::IsNullOrWhiteSpace($ApiKey) -or [string]::IsNullOrWhiteSpace($OAuthId)) {
     Write-Host "API Key and OAuth ID are required for deployment." -ForegroundColor Red
@@ -48,7 +50,7 @@ if ([string]::IsNullOrWhiteSpace($ApiKey) -or [string]::IsNullOrWhiteSpace($OAut
 
 # Deploy
 Write-Host "Deploying to Cloud Run..." -ForegroundColor Green
-$DeployCmd = "gcloud run deploy $ServiceName --image gcr.io/$ProjectID/$ServiceName --platform managed --region $Region --allow-unauthenticated --set-env-vars ""VITE_GEMINI_API_KEY=$ApiKey,GOOGLE_CLIENT_ID=$OAuthId"""
+$DeployCmd = "gcloud run deploy $ServiceName --image gcr.io/$ProjectID/$ServiceName --platform managed --region $Region --allow-unauthenticated --set-env-vars ""VITE_GEMINI_API_KEY=$ApiKey,GOOGLE_CLIENT_ID=$OAuthId,VITE_GOOGLE_API_KEY=$GoogleApiKey,VITE_STARTER_FOLDER_ID=$StarterFolderId"""
 Invoke-Expression $DeployCmd
 
 if ($LASTEXITCODE -ne 0) {
