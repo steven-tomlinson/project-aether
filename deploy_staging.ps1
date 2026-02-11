@@ -62,7 +62,10 @@ cmd /c "gcloud config set project $ProjectID"
 # 3. Build (Separate staging text/tag if needed, but usually same codebase)
 Write-Host "Building Container..." -ForegroundColor Green
 Write-Host "Building Container with Staging Config..." -ForegroundColor Green
-cmd /c "gcloud builds submit --config cloudbuild_staging.yaml --substitutions=_STAGING_CLIENT_ID=$StagingClientId,_GOOGLE_API_KEY=$GoogleApiKey,_STARTER_FOLDER_ID=$StarterFolderId ."
+Write-Host "Building Container with Staging Config..." -ForegroundColor Green
+$BuildCmd = "gcloud builds submit --config cloudbuild_staging.yaml --substitutions=_STAGING_CLIENT_ID=$StagingClientId,_GOOGLE_API_KEY=$GoogleApiKey,_STARTER_FOLDER_ID=$StarterFolderId ."
+Write-Host "DEBUG: Running command: $BuildCmd" -ForegroundColor DarkGray
+Invoke-Expression $BuildCmd
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Build failed." -ForegroundColor Red
