@@ -19,7 +19,7 @@ export class GoogleDriveService {
 
   async initLibrary(): Promise<string> {
     const timestamp = new Date().getTime();
-    const uniqueName = `Project Aether Archive [${timestamp}]`; 
+    const uniqueName = 'Project Aether Archive';
     try {
       // Search for existing folder with the UNIQUE name
       const search = await axios.get(`${DRIVE_API}/files`, {
@@ -77,11 +77,42 @@ export class GoogleDriveService {
     }
   }
 
+  async listPublicFolder(folderId: string, apiKey: string): Promise<any[]> {
+    try {
+      const response = await axios.get(`${DRIVE_API}/files`, {
+        params: {
+          q: `'${folderId}' in parents and trashed = false`,
+          key: apiKey,
+          fields: "files(id, name, mimeType)"
+        }
+      });
+      return response.data.files;
+    } catch (error: any) {
+      console.error("G-DRIVE_LIST_PUBLIC_ERROR:", error.response?.data || error.message);
+      return [];
+    }
+  }
+
+  async getFileContent(fileId: string, apiKey: string): Promise<any | null> {
+    try {
+      const response = await axios.get(`${DRIVE_API}/files/${fileId}`, {
+        params: {
+          alt: 'media',
+          key: apiKey
+        }
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error(`G-DRIVE_GET_CONTENT_ERROR [${fileId}]:`, error.response?.data || error.message);
+      return null;
+    }
+  }
+
   async saveCatalog(books: BookManifest[]): Promise<string> {
     if (!this.folderId) await this.initLibrary();
 
     const catalogContent = JSON.stringify(books, null, 2);
-    
+
     try {
       const search = await axios.get(`${DRIVE_API}/files`, {
         headers: this.headers,
@@ -123,7 +154,7 @@ export class GoogleDriveService {
 
   async saveBook(book: BookManifest): Promise<string> {
     if (!this.folderId) await this.initLibrary();
-    
+
     try {
       const search = await axios.get(`${DRIVE_API}/files`, {
         headers: this.headers,

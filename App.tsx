@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import LibraryShelf from './components/LibraryShelf';
 import BookReader from './components/BookReader';
-import { LIBRARY_MANIFEST } from './constants';
+import { STARTER_MANIFEST_ID, GOOGLE_API_KEY } from './constants';
 import { BookManifest, User } from './types';
 import { useGoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
@@ -14,6 +14,58 @@ function App() {
   const [user, setUser] = useState<User | null>(null);
   const [driveService, setDriveService] = useState<GoogleDriveService | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
+
+  const [starterBooks, setStarterBooks] = useState<BookManifest[]>([]);
+  const [userBooks, setUserBooks] = useState<BookManifest[]>([]);
+  const [books, setBooks] = useState<BookManifest[]>([]);
+
+  // 1. Load Starter Library (Public)
+  useEffect(() => {
+    const loadStarterLibrary = async () => {
+      if (!STARTER_MANIFEST_ID || !GOOGLE_API_KEY) {
+        console.warn("Missing VITE_STARTER_FOLDER_ID or VITE_GOOGLE_API_KEY");
+        return;
+      }
+
+      console.log("LOADING_STARTER_LIBRARY...");
+      const service = new GoogleDriveService(""); // No token needed for public
+      try {
+        const files = await service.listPublicFolder(STARTER_MANIFEST_ID, GOOGLE_API_KEY);
+        console.log(`FOUND ${files.length} STARTER MANIFESTS`);
+
+        const loadedBooks: BookManifest[] = [];
+        await Promise.all(files.map(async (file: any) => {
+          // Basic check if it looks like a manifest file (JSON)
+          if (file.mimeType === 'application/json' && !file.name.startsWith('_')) {
+            const content = await service.getFileContent(file.id, GOOGLE_API_KEY);
+            if (content && content.id) {
+              loadedBooks.push(content);
+            }
+          }
+        }));
+
+        console.log(`LOADED ${loadedBooks.length} STARTER BOOKS`);
+        setStarterBooks(loadedBooks);
+      } catch (err) {
+        console.error("FAILED_TO_LOAD_STARTER", err);
+      }
+    };
+
+    loadStarterLibrary();
+  }, []);
+
+  // 2. Merge Libraries
+  useEffect(() => {
+    // Combine unique books. User books overwrite starter books if IDs match (optional, but good for progression)
+    // For now, simple concatenation, filtering duplicates by ID
+    const combined = [...starterBooks];
+    userBooks.forEach(ub => {
+      if (!combined.find(cb => cb.id === ub.id)) {
+        combined.push(ub);
+      }
+    });
+    setBooks(combined);
+  }, [starterBooks, userBooks]);
 
   // Persist User Session
   useEffect(() => {
@@ -65,34 +117,34 @@ function App() {
     // Explicitly set flow to implicit to avoid confusion in dynamic environments
     flow: 'implicit',
     // Request scope for reading files and App Data (for Library persistence)
-    scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.metadata.readonly profile email' 
+    scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.metadata.readonly profile email'
   });
 
   // Init Drive Service when User & Token are ready
   useEffect(() => {
     if (user?.token) {
-        const service = new GoogleDriveService(user.token);
-        setDriveService(service);
-        
-        // Initial Sync
-        const syncLibrary = async () => {
-            setSyncStatus('syncing');
-            try {
-                const cloudCatalog = await service.getCatalog();
-                if (cloudCatalog.length > 0) {
-                    console.log(`CLOUD_SYNC: Restored ${cloudCatalog.length} volumes.`);
-                    setBooks(cloudCatalog);
-                } else {
-                    console.log("CLOUD_SYNC: Initializing fresh archive...");
-                    await service.saveCatalog(LIBRARY_MANIFEST);
-                }
-                setSyncStatus('synced');
-            } catch (error) {
-                console.error("CLOUD_SYNC_FAILED", error);
-                setSyncStatus('error');
-            }
-        };
-        syncLibrary();
+      const service = new GoogleDriveService(user.token);
+      setDriveService(service);
+
+      // Initial Sync
+      const syncLibrary = async () => {
+        setSyncStatus('syncing');
+        try {
+          const cloudCatalog = await service.getCatalog();
+          if (cloudCatalog.length > 0) {
+            console.log(`CLOUD_SYNC: Restored ${cloudCatalog.length} volumes.`);
+            setUserBooks(cloudCatalog);
+          } else {
+            console.log("CLOUD_SYNC: Initializing fresh archive...");
+            await service.saveCatalog([]);
+          }
+          setSyncStatus('synced');
+        } catch (error) {
+          console.error("CLOUD_SYNC_FAILED", error);
+          setSyncStatus('error');
+        }
+      };
+      syncLibrary();
     }
   }, [user?.token]);
 
@@ -124,7 +176,7 @@ function App() {
     setSelectedBook(null);
   }
 
-  const [books, setBooks] = useState<BookManifest[]>(LIBRARY_MANIFEST);
+
   const [isUploading, setIsUploading] = useState(false);
   const [pickerInited, setPickerInited] = useState(false);
   const [gisInited, setGisInited] = useState(false);
@@ -136,17 +188,17 @@ function App() {
         setPickerInited(true);
       });
     };
-    
+
     // Check if script is loaded, if not wait for it
     if (window.gapi) {
-        loadGapi();
+      loadGapi();
     } else {
-        const interval = setInterval(() => {
-            if (window.gapi) {
-                clearInterval(interval);
-                loadGapi();
-            }
-        }, 500);
+      const interval = setInterval(() => {
+        if (window.gapi) {
+          clearInterval(interval);
+          loadGapi();
+        }
+      }, 500);
     }
   }, []);
 
@@ -162,33 +214,33 @@ function App() {
       setIsUploading(true);
       try {
         console.log(`FETCHING_DRIVE_FILE: ${fileId} (${mimeType})`);
-        
+
         let url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
-        
+
         // If it's a Google Doc, we must export it as text/plain
         if (mimeType === 'application/vnd.google-apps.document') {
-            url = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=text/plain`;
+          url = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=text/plain`;
         }
 
         const response = await axios.get(url, {
-            headers: { Authorization: `Bearer ${oauthToken}` },
-            responseType: 'blob' // Important: treat as blob/file
+          headers: { Authorization: `Bearer ${oauthToken}` },
+          responseType: 'blob' // Important: treat as blob/file
         });
 
         const file = new File([response.data], fileName, { type: 'text/plain' });
-        
+
         // Send to Ingestion Engine
         const newBook = await uploadBook(file);
-        
-        const updatedBooks = [...books, newBook];
-        setBooks(updatedBooks);
-        
+
+        const updatedBooks = [...userBooks, newBook];
+        setUserBooks(updatedBooks);
+
         // Sync to Cloud
         if (driveService) {
-            setSyncStatus('syncing');
-            await driveService.saveBook(newBook); // Backup individual
-            await driveService.saveCatalog(updatedBooks); // Update index
-            setSyncStatus('synced');
+          setSyncStatus('syncing');
+          await driveService.saveBook(newBook); // Backup individual
+          await driveService.saveCatalog(updatedBooks); // Update index
+          setSyncStatus('synced');
         }
 
         alert(`INGESTION COMPLETE: ${newBook.title}`);
@@ -204,27 +256,27 @@ function App() {
 
   const handleDriveIngest = () => {
     if (!user) {
-        alert("Authentication required.");
-        return;
+      alert("Authentication required.");
+      return;
     }
 
     if (!pickerInited || !user.token) {
-        alert("System initializing... please wait or re-login.");
-        return;
+      alert("System initializing... please wait or re-login.");
+      return;
     }
 
     const view = new window.google.picker.View(window.google.picker.ViewId.DOCS);
     view.setMimeTypes("text/plain,application/vnd.google-apps.document");
-    
+
     const picker = new window.google.picker.PickerBuilder()
-        .enableFeature(window.google.picker.Feature.NAV_HIDDEN)
-        .setAppId("418202563769") // Project ID from config
-        .setOAuthToken(user.token)
-        .addView(view)
-        .addView(new window.google.picker.DocsUploadView())
-        .setCallback(handleDriveSelect)
-        .build();
-    
+      .enableFeature(window.google.picker.Feature.NAV_HIDDEN)
+      .setAppId("418202563769") // Project ID from config
+      .setOAuthToken(user.token)
+      .addView(view)
+      .addView(new window.google.picker.DocsUploadView())
+      .setCallback(handleDriveSelect)
+      .build();
+
     picker.setVisible(true);
   };
 
@@ -232,8 +284,8 @@ function App() {
     setIsUploading(true);
     try {
       const newBook = await uploadBook(file);
-      const updatedBooks = [...books, newBook];
-      setBooks(updatedBooks);
+      const updatedBooks = [...userBooks, newBook];
+      setUserBooks(updatedBooks);
 
       // Sync to Cloud
       if (driveService) {
@@ -257,8 +309,8 @@ function App() {
       {selectedBook ? (
         <BookReader book={selectedBook} user={user} onClose={handleCloseBook} />
       ) : (
-        <LibraryShelf 
-          books={books} 
+        <LibraryShelf
+          books={books}
           onSelectBook={handleSelectBook}
           onLocalIngest={handleLocalIngest}
           onDriveIngest={handleDriveIngest}
@@ -270,7 +322,7 @@ function App() {
           syncStatus={syncStatus}
         />
       )}
-      <SeedingControls driveService={driveService} />
+      <SeedingControls driveService={driveService} sourceBooks={starterBooks} />
     </div>
   );
 }

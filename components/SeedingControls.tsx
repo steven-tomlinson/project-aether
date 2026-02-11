@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { LIBRARY_MANIFEST } from '../constants';
+import { BookManifest } from '../types';
 import { GoogleDriveService } from '../services/GoogleDriveService';
 
 interface SeedingControlsProps {
   driveService: GoogleDriveService | null;
+  sourceBooks: BookManifest[];
 }
 
-const SeedingControls: React.FC<SeedingControlsProps> = ({ driveService }) => {
+const SeedingControls: React.FC<SeedingControlsProps> = ({ driveService, sourceBooks }) => {
   const [seedingStatus, setSeedingStatus] = useState<'idle' | 'seeding' | 'complete' | 'error'>('idle');
   const [log, setLog] = useState<string[]>([]);
 
@@ -26,10 +27,10 @@ const SeedingControls: React.FC<SeedingControlsProps> = ({ driveService }) => {
       const folderId = await driveService.initLibrary();
       addLog(`Library folder ready: ${folderId}`);
 
-      addLog(`Seeding ${LIBRARY_MANIFEST.length} books from manifest...`);
-      
+      addLog(`Seeding ${sourceBooks.length} books from manifest...`);
+
       // Upload each book individually
-      for (const book of LIBRARY_MANIFEST) {
+      for (const book of sourceBooks) {
         addLog(`Uploading: ${book.title}...`);
         await driveService.saveBook(book);
         addLog(`Uploaded: ${book.title}`);
@@ -37,7 +38,7 @@ const SeedingControls: React.FC<SeedingControlsProps> = ({ driveService }) => {
 
       // Upload the catalog index
       addLog("Updating catalog index...");
-      await driveService.saveCatalog(LIBRARY_MANIFEST);
+      await driveService.saveCatalog(sourceBooks);
       addLog("Catalog index updated.");
 
       setSeedingStatus('complete');
@@ -53,7 +54,7 @@ const SeedingControls: React.FC<SeedingControlsProps> = ({ driveService }) => {
   if (seedingStatus === 'idle') {
     return (
       <div className="fixed bottom-4 right-4 z-50">
-        <button 
+        <button
           onClick={handleSeed}
           disabled={!driveService}
           className="bg-aether-amber text-black font-mono text-xs px-4 py-2 rounded hover:bg-aether-glow disabled:opacity-50"
