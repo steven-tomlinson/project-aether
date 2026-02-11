@@ -14,10 +14,13 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-      'process.env.VITE_GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-      'process.env.GOOGLE_CLIENT_ID': JSON.stringify(env.GOOGLE_CLIENT_ID),
-      'process.env.STAGING_CLIENT_ID': JSON.stringify(env.VITE_STAGING_CLIENT_ID || env.STAGING_CLIENT_ID),
-      'process.env.VITE_GOOGLE_CLIENT_ID': JSON.stringify(env.GOOGLE_CLIENT_ID)
+      'process.env.GOOGLE_CLIENT_ID': JSON.stringify(process.env.GOOGLE_CLIENT_ID || env.GOOGLE_CLIENT_ID),
+      'process.env.STAGING_CLIENT_ID': JSON.stringify(process.env.VITE_STAGING_CLIENT_ID || env.VITE_STAGING_CLIENT_ID || env.STAGING_CLIENT_ID),
+      'process.env.VITE_GOOGLE_CLIENT_ID': JSON.stringify(process.env.GOOGLE_CLIENT_ID || env.GOOGLE_CLIENT_ID),
+      'process.env.VITE_GOOGLE_API_KEY': JSON.stringify(process.env.VITE_GOOGLE_API_KEY || env.VITE_GOOGLE_API_KEY || "AIzaSyBy4rWW3PbFyKpCOigV3uBRm_8pjtK-N5w"),
+      'process.env.VITE_STARTER_FOLDER_ID': JSON.stringify(process.env.VITE_STARTER_FOLDER_ID || env.VITE_STARTER_FOLDER_ID || "1y-I0ydJBTG6DzVFqcxR-6pPqQwr7xHPK"),
+      'import.meta.env.VITE_GOOGLE_API_KEY': JSON.stringify(process.env.VITE_GOOGLE_API_KEY || env.VITE_GOOGLE_API_KEY || "AIzaSyBy4rWW3PbFyKpCOigV3uBRm_8pjtK-N5w"),
+      'import.meta.env.VITE_STARTER_FOLDER_ID': JSON.stringify(process.env.VITE_STARTER_FOLDER_ID || env.VITE_STARTER_FOLDER_ID || "1y-I0ydJBTG6DzVFqcxR-6pPqQwr7xHPK")
     },
     resolve: {
       alias: {

@@ -46,8 +46,16 @@ function App() {
 
         console.log(`LOADED ${loadedBooks.length} STARTER BOOKS`);
         setStarterBooks(loadedBooks);
-      } catch (err) {
+
+        if (loadedBooks.length === 0) {
+          console.error("CRITICAL: NO BOOKS LOADED FROM DRIVE. CHECK API KEY PERMISSIONS OR FOLDER SHARING.");
+        }
+      } catch (err: any) {
         console.error("FAILED_TO_LOAD_STARTER", err);
+        if (axios.isAxiosError(err)) {
+          console.error("API Error Details:", err.response?.data);
+        }
+        alert("CRITICAL ERROR: Failed to load library from Google Drive. Check console for details.");
       }
     };
 
