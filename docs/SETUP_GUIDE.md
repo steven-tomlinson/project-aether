@@ -15,26 +15,38 @@ To deploy Project Aether, you need three pieces of information. Here is exactly 
 
 ## 3. Google Client ID (OAuth)
 **Where:** [Google Cloud Console - Credentials](https://console.cloud.google.com/apis/credentials)
-**Action:**
+
+### Setup for Local & Prod
 1.  Look under **OAuth 2.0 Client IDs**.
 2.  If none exist, click **Create Credentials** > **OAuth client ID**.
     *   **Application type:** Web application.
-    *   **Name:** `Aether App`.
-    *   **Authorized Javascript origins:** `https://aether.musubipress.com` (and `http://localhost:3000` for dev).
-    *   **Authorized redirect URIs:** `https://aether.musubipress.com` (and `http://localhost:3000` for dev).
-**Value:** A string ending in `.apps.googleusercontent.com`.
+    *   **Name:** `Aether App (Prod)`.
+    *   **Authorized Javascript origins:** `https://aether.musubipress.com`, `http://localhost:3000`.
+3.  Store this in `.env` as `GOOGLE_CLIENT_ID`.
+
+### Setup for Staging
+If you use the staging environment (`aether-app-staging`), you must create a separate Client ID for the staging URL.
+1.  **Authorized Javascript origins:** `https://aether-app-staging-cf3xkhn3ma-uc.a.run.app`.
+2.  Store this in `.env` as `STAGING_CLIENT_ID`.
 
 ---
 
-## Prerequisite: Authenticate your Terminal
-Before running the deployment script, you **MUST** log in to Google Cloud in your terminal:
+## 🚀 Deployment Scripts
 
+The repository includes two main deployment scripts for PowerShell. Both will prompt you for your API keys and Client IDs, then save them as environment variables in Cloud Run.
+
+### 1. Production Deployment
+Deploys to the main `aether-app` service.
 ```powershell
-gcloud auth login
+.\deploy.ps1
 ```
 
-Then, try the deployment script again:
-
+### 2. Staging Deployment
+Deploys to the `aether-app-staging` service for testing.
 ```powershell
-.\deploy_automated.ps1
+.\deploy_staging.ps1
 ```
+
+> [!TIP]
+> **Authentication Check**: If you get a "403: access_denied" error during sign-in on a new environment, remember to add your email to the **Test Users** list in the Google Cloud Console's OAuth Consent Screen.
+

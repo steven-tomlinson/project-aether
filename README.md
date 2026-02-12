@@ -29,13 +29,14 @@ Built for the **Google Gemini 3 Hackathon**, Project Aether reimagines the publi
 *   **Vibe Coding**: A "System Shock" inspired interface that feels like a databank from 2077, built with modern React and Tailwind.
 *   **Generative Visuals**: As you read, **Nano Banana Pro** (Gemini 3.0 Image) hallucinates scene-accurate artwork for each chapter.
 *   **Deep Reasoning**: **Gemini 3.0 Pro** acts as the "Librarian," understanding context, summarizing themes, and even generating cover art prompts.
-*   **Resilient Fallback**: A sophisticated "Graceful Degradation" pattern ensures the experience never breaks, sliding from Pro -> Flash -> Mock data if APIs are unreachable.
+*   **Resilient Data Access**: A specialized **Backend Proxy** in FastAPI bypasses common browser restrictions (CORS/Referrer) to deliver Google Drive manifests with high reliability using a automated key-rotation strategy.
+*   **Persistent Indexing**: The "Universal Reader" reconfigures its UI (Fonts, Colors, Sounds) based on a `manifest.json` fetched directly from the cloud.
 
 ---
 
 ## 🧠 Powered by Gemini 3.0 Universe
 
-Project Aether doesn't just "use AI"—it is built *on* the new unified model ecosystem:
+Project Aether is built on the new unified model ecosystem:
 
 | Feature | Model Alloy | API ID | Role |
 | :--- | :--- | :--- | :--- |
@@ -46,58 +47,53 @@ Project Aether doesn't just "use AI"—it is built *on* the new unified model ec
 
 ---
 
-## 🎞️ End-to-End Demo
+## 🏗️ Architecture: The Hybrid Proxy
 
-Watch Project Aether in action: **Ingestion -> Reading -> visual Dreaming.**
-
-![Project Aether Demo](assets/demo.webp)
-
----
-
-## 🚀 Hackathon Submission Checklist
-
-This repository represents a complete, deployable entry for the **Google Gemini 3 Hackathon**.
-
-- [x] **Gemini 3.0 Integration**: Validated use of `gemini-3.0-pro` and `gemini-3.0-flash` via `GeminiService.ts`.
-- [x] **Native Multimodality**: Text-to-Image and Text-to-Metadata pipelines are fully operational.
-- [x] **Real-World Utility**: Functioning Google Drive integration for user-owned libraries.
-- [x] **"Wow" Factor**: Custom "Retro-Future" UI design system (Vibe Coded).
+Project Aether uses a hybrid architecture to solve traditional Web API restrictions:
+1.  **Frontend (React/Vite)**: Requests the public library from the Backend.
+2.  **Backend (FastAPI)**: Proxies requests to Google Drive, spoofing referrers and rotating API keys if a limit or block is encountered.
+3.  **Storage (Google Drive)**: Acts as the "Cloud Bookshelf" containing book metadata and text.
 
 ---
 
-## 🛠️ Deployment Guide
+## 🛠️ Deployment & Setup
 
-### Prerequisites
-- Node.js 18+
-- Python 3.10+
-- Google Cloud Project (Drive API enabled)
-- Gemini API Key
+### Requirements
+- Node.js 18+ & Python 3.10+
+- Google Cloud Project with Drive API enabled.
+- Gemini API Key.
 
-### 1. Frontend (The Interface)
+### Local Development
 ```bash
-# Install dependencies
+# Frontend
 npm install
-
-# Configure Environment
-# Create .env.local and add:
-# VITE_GEMINI_API_KEY=your_key_here
-# VITE_GOOGLE_CLIENT_ID=your_client_id
-
-# Launch
 npm run dev
-```
 
-### 2. Backend (The Ingestion Engine)
-The python microservice handles heavy text processing and image proxying.
-```bash
+# Backend
 cd backend
-
-# Install dependencies
 pip install -r requirements.txt
-
-# Launch Server
 uvicorn main:app --reload
 ```
+
+### Automated Deployment (Cloud Run)
+We provide PowerShell scripts to deploy the unified container (Frontend + Backend) to Google Cloud Run.
+
+*   **Production**: `.\deploy.ps1`
+*   **Staging**: `.\deploy_staging.ps1`
+
+These scripts handle image building via `cloudbuild.yaml`, pushing to Google Container Registry, and deploying with the correct environment variables.
+
+---
+
+## 📝 Environment Variables
+
+Create a `.env` in the root:
+- `GEMINI_API_KEY`: Your Gemini 3 Pro/Flash API Key.
+- `GOOGLE_CLIENT_ID`: OAuth Client ID (for Production/Localhost).
+- `STAGING_CLIENT_ID`: OAuth Client ID (Specific to Staging URL).
+- `VITE_GOOGLE_API_KEY`: Google API Key with Drive Read access (restricted).
+- `VITE_STARTER_FOLDER_ID`: The Folder ID for your public book manifest library.
+
 
 ---
 

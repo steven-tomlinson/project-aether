@@ -9,7 +9,11 @@ This microservice handles the high-performance tasks for Project Aether, specifi
     -   Analyzes content compatibility.
     -   (Future) Splits text into semantic chunks for vector storage.
 
-2.  **Visual Cortex Proxy**:
+2.  **Google Drive Library Proxy**:
+    -   Securely fetches public library manifests from Google Drive.
+    -   Bypasses client-side referrer restrictions using a multi-key rotation strategy.
+
+3.  **Visual Cortex Proxy**:
     -   Acts as a secure gateway to the Gemini 3.0 API for image generation.
     -   Handles prompt enhancement and error recovery.
 
