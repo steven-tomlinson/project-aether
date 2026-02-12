@@ -27,10 +27,13 @@ cmd /c "gcloud config set project $ProjectID"
 Write-Host "Enabling necessary services..." -ForegroundColor Green
 cmd /c "gcloud services enable cloudbuild.googleapis.com run.googleapis.com"
 
-# Build and Submit
+# Build and Submit using Cloud Build Config (Ensures ARGs are passed)
 Write-Host "Building and submitting container image..." -ForegroundColor Green
-# Using cmd /c to ensure proper argument parsing for gcloud
-cmd /c "gcloud builds submit --tag gcr.io/$ProjectID/$ServiceName ."
+# Quote the substitutions to prevent PowerShell parsing issues
+$Substitutions = "_GOOGLE_API_KEY=$GoogleApiKey,_STARTER_FOLDER_ID=$StarterFolderId"
+$BuildCmd = "gcloud builds submit --config cloudbuild.yaml --substitutions `"$Substitutions`" ."
+# Using Invoke-Expression to handle the quoted strings correctly
+Invoke-Expression $BuildCmd
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Build failed." -ForegroundColor Red
@@ -38,10 +41,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # Prompt for Secrets
-$ApiKey = Read-Host "Enter your Gemini API Key"
-$OAuthId = Read-Host "Enter your Google Client ID (OAuth)"
-$GoogleApiKey = Read-Host "Enter your Google API Key (Drive)"
-$StarterFolderId = Read-Host "Enter your Starter Folder ID"
+# (Variables already captured above)
 
 if ([string]::IsNullOrWhiteSpace($ApiKey) -or [string]::IsNullOrWhiteSpace($OAuthId)) {
     Write-Host "API Key and OAuth ID are required for deployment." -ForegroundColor Red
