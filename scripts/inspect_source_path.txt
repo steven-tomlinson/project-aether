@@ -1,0 +1,1 @@
+C:\Users\standarduser\AppData\Local\Programs\Python\Python313\Lib\site-packages\langextract\__init__.py

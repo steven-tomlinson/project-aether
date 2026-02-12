@@ -4,12 +4,16 @@ from typing import List, Dict, Any
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
+from backend.services.langextract_service import LangExtractService
 
 load_dotenv()
 
-# Initialize Gemini Client
+# Initialize Gemini Client for Generation (Image/Audio)
 api_key = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key) if api_key else None
+
+# Initialize LangExtract Service
+lang_service = LangExtractService(api_key=api_key) if api_key else None
 
 def chunk_text(text: str, chunk_size: int = 1000) -> List[str]:
     """
@@ -18,166 +22,126 @@ def chunk_text(text: str, chunk_size: int = 1000) -> List[str]:
     """
     return [text[i:i+chunk_size] for i in range(0, len(text), chunk_size)]
 
-def analyze_vibe(text_sample: str) -> Dict[str, Any]:
-    """
-    Uses Gemini Flash to extract the 'Vibe' (Theme & Audio Profile).
-    """
-    if not client:
-        # Fallback for when API key is missing
-        return {
-            "theme": {
-                "primaryColor": "#FF4500",
-                "font": "Orbitron",
-                "backgroundStyle": "pulp_texture"
-            },
-            "audioProfile": {
-                "narratorVoice": "Aoede",
-                "ambientTrack": "desert_wind"
-            },
-            "tags": ["Analysis Failed", "check-api-key"]
-        }
-
-    prompt = """
-    Analyze the following text sample from a book.
-    Determine the Genre, Tone, and Setting.
-    Based on this, recommend:
-    1. A CSS Primary Color (hex code).
-    2. A Font (options: 'Orbitron', 'Share Tech Mono', 'Merriweather', 'Lora').
-    3. A Background Style Keyword (options: 'pulp_texture', 'industrial_blueprint', 'noir_shadows', 'clinical_white', 'verdant_forest').
-    4. An Audio Narrator Voice (options: 'Aoede', 'Charon', 'Fenrir', 'Puck', 'Kore', 'Zephyr').
-    5. An Ambient Track (options: 'desert_wind', 'computer_hum', 'subterranean_rumble', 'wind_leaves', 'dripping_water', 'hospital_beeps', 'silence').
-    6. Three short tags describing the book.
-
-    Return ONLY a valid JSON object with this structure:
-    {
-        "theme": { "primaryColor": "...", "font": "...", "backgroundStyle": "..." },
-        "audioProfile": { "narratorVoice": "...", "ambientTrack": "..." },
-        "tags": ["...", "...", "..."]
-    }
-    """
-
-    try:
-        response = client.models.generate_content(
-            model="gemini-3.0-flash",
-            contents=[prompt, text_sample],
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json"
-            )
-        )
-        return json.loads(response.text)
-    except Exception as e:
-        print(f"Error analyzing vibe: {e}")
-        return {
-            "theme": {"primaryColor": "#000000", "font": "Arial", "backgroundStyle": "default"},
-            "audioProfile": {"narratorVoice": "default", "ambientTrack": "silence"},
-            "tags": ["Error"]
-        }
-
-def analyze_full_content(text: str) -> Dict[str, Any]:
-    """
-    Uses Gemini 3.0 Pro (The Brain) to analyze the ENTIRE text and break it down into cinematic scenes.
-    Generates prompts for 'Nano Banana' (Images) and 'Veo' (Video).
-    """
-    if not client:
-        return {"scenes": [], "vibe": {}}
-
-    prompt = """
-    You are an expert Director of Intent (Vibe Coder) for Project Aether, powered by Gemini 3. 
-    Analyze the following Science Fiction text (Full Content).
-    
-    1.  **Vibe Analysis**: Determine the Genre, Tone, Setting, and Audio/Visual Style.
-    2.  **Scene Segmentation**: Break the story down into key narrative scenes (approx 5-10 major scenes max for this demo, or legitimate chapter breaks if short).
-    3.  **Prompt Engineering**:
-        *   **Image Prompt (Nano Banana)**: consistently styled, detailed visual description for the scene. Use keywords like 'pulp art', 'cinematic lighting', 'highly detailed'.
-        *   **Video Prompt (Veo)**: A description of the *motion* and *action* in the scene for video generation (e.g., "Camera pans across the red desert," "The character approaches the glowing artifact").
-
-    Output valid JSON:
-    {
-        "theme": { "primaryColor": "#HEX", "font": "FontName", "backgroundStyle": "style_keyword" },
-        "audioProfile": { "narratorVoice": "VoiceName", "ambientTrack": "track_id" },
-        "tags": ["tag1", "tag2", "tag3"],
-        "scenes": [
-            {
-                "id": 1,
-                "heading": "Scene Title",
-                "text": "The full text content of this scene...", 
-                "imagePrompt": "Nano Banana style: ...",
-                "videoPrompt": "Veo style: ..."
-            }
-        ]
-    }
-    """
-
-    try:
-        # Using Gemini 3.0 Pro for deep narrative analysis
-        response = client.models.generate_content(
-            model="gemini-3.0-pro",
-            contents=[prompt, text],
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json"
-            )
-        )
-        return json.loads(response.text)
-    except Exception as e:
-        print(f"Error in deep analysis: {e}")
-        return None
-
 def process_book_content(filename: str, content: str) -> Dict[str, Any]:
     """
-    Orchestrates the ingestion process with Deep Analysis.
+    Orchestrates the ingestion process with LangExtract.
     """
-    # 1. Deep Analysis (Gemini 3.0 Pro)
-    print(f"Ingesting {filename} ({len(content)} chars)... Sending to Gemini 3.0 Pro...")
+    print(f"Ingesting {filename} ({len(content)} chars)... Using LangExtract Service...")
     
-    analysis = analyze_full_content(content)
-    
-    if not analysis or not analysis.get("scenes"):
-        # Fallback to simple chunking if AI fails
-        print("AI Analysis failed, falling back to simple chunking.")
-        raw_chunks = chunk_text(content, chunk_size=1500)
-        # Fallback to 3.0 Flash for quick vibe
-        vibe_data = analyze_vibe(content[:5000])
-        scenes = []
-        for i, chunk in enumerate(raw_chunks):
-            scenes.append({
-                "id": i,
-                "heading": f"Part {i+1}",
-                "text": chunk,
-                "imagePrompt": f"Illustration for part {i+1}: {vibe_data['tags'][0]} style.",
-                "videoPrompt": f"Cinematic shot of {vibe_data['tags'][0]} scene.",
-                "generatedImageUrl": None,
-                "generatedAudioUrl": None
-            })
-    else:
-        print("AI Analysis Successful. Structuring manifest.")
-        vibe_data = analysis # Flattened structure in our new prompt
-        scenes = analysis.get("scenes", [])
-        # Ensure ID injection if missing
+    if not lang_service:
+        print("LangExtract Service unavailable (missing API key). Using fallback.")
+        return _fallback_process(filename, content)
+
+    try:
+        # 1. Deep Analysis (LangExtract)
+        # We process the full text (up to a reasonable limit like 1M chars) 
+        # as Gemini 1.5/2.0/3.0 have large context windows.
+        
+        # Safety cap at 500k chars to prevent memory issues with massive files
+        analysis_text = content[:500000] 
+        analysis_result = lang_service.extract_analysis(analysis_text)
+        
+        metadata = analysis_result.get("metadata", {})
+        scenes = analysis_result.get("scenes", [])
+        
+        # If no scenes extracted (e.g. failure), fallback
+        if not scenes:
+            print("LangExtract returned no scenes. Fallback.")
+            return _fallback_process(filename, content)
+
+        print(f"LangExtract Successful. Metadata: {metadata.get('title')}. Scenes: {len(scenes)}")
+
+        # 2. Enrich Manifest
+        # Helper to map tone/setting to theme colors/audio (Vibe Logic)
+        theme = _map_vibe_to_theme(metadata.get("tone", ""), metadata.get("setting", ""))
+        audio_profile = _map_vibe_to_audio(metadata.get("tone", ""), metadata.get("genre", ""))
+
+        # Ensure ID injection
         for i, s in enumerate(scenes):
             s["id"] = i
             s["generatedImageUrl"] = None
             s["generatedAudioUrl"] = None
 
-    # Construct Manifest
+        return {
+            "id": filename.lower().replace(" ", "_").replace(".", "_"),
+            "title": metadata.get("title", filename), 
+            "author": metadata.get("author", "Unknown"), 
+            "publicationYear": metadata.get("publicationYear", "2024"),
+            "description": f"Vibe Coded by Gemini 3. {metadata.get('genre')} - {metadata.get('tone')}",
+            "coverImage": "https://picsum.photos/400/600?grayscale", 
+            "tags": [metadata.get("genre"), metadata.get("tone"), "Sci-Fi"], # Add defaults
+            "theme": theme,
+            "audioProfile": audio_profile,
+            "scenes": scenes
+        }
+        
+    except Exception as e:
+        print(f"Error in process_book_content: {e}")
+        return _fallback_process(filename, content)
+
+def _fallback_process(filename: str, content: str) -> Dict[str, Any]:
+    """
+    Original simple ingestion logic using regex/chunking.
+    """
+    print("Executing Fallback Ingestion...")
+    raw_chunks = chunk_text(content, chunk_size=1500)
+    scenes = []
+    for i, chunk in enumerate(raw_chunks):
+        scenes.append({
+            "id": i,
+            "heading": f"Part {i+1}",
+            "text": chunk,
+            "imagePrompt": f"Illustration for part {i+1}",
+            "videoPrompt": f"Cinematic shot of scene {i+1}",
+            "generatedImageUrl": None,
+            "generatedAudioUrl": None
+        })
+        
     return {
         "id": filename.lower().replace(" ", "_").replace(".", "_"),
         "title": filename, 
         "author": "Unknown", 
         "publicationYear": 2024,
-        "description": f"Vibe Coded by Gemini 3. {', '.join(vibe_data.get('tags', []))}",
+        "description": "Fallback Ingestion",
         "coverImage": "https://picsum.photos/400/600?grayscale", 
-        "tags": vibe_data.get('tags', ["Sci-Fi"]),
-        "theme": vibe_data.get('theme', {
+        "tags": ["Fallback"],
+        "theme": {
             "primaryColor": "#FF4500",
             "font": "Orbitron",
             "backgroundStyle": "pulp_texture"
-        }),
-        "audioProfile": vibe_data.get('audioProfile', {
+        },
+        "audioProfile": {
             "narratorVoice": "Aoede",
             "ambientTrack": "desert_wind"
-        }),
+        },
         "scenes": scenes
     }
+
+def _map_vibe_to_theme(tone: str, setting: str) -> Dict[str, str]:
+    """Maps extracted tone/setting to UI theme properties."""
+    tone = tone.lower()
+    setting = setting.lower()
+    
+    if "dark" in tone or "horror" in tone:
+        return {"primaryColor": "#8B0000", "font": "Merriweather", "backgroundStyle": "noir_shadows"}
+    elif "whimsical" in tone or "fantasy" in tone:
+        return {"primaryColor": "#9370DB", "font": "Lora", "backgroundStyle": "verdant_forest"}
+    elif "clean" in tone or "medical" in tone:
+        return {"primaryColor": "#00CED1", "font": "Share Tech Mono", "backgroundStyle": "clinical_white"}
+    else:
+         return {"primaryColor": "#FF4500", "font": "Orbitron", "backgroundStyle": "pulp_texture"}
+
+def _map_vibe_to_audio(tone: str, genre: str) -> Dict[str, str]:
+    """Maps extracted tone/genre to Audio properties."""
+    tone = tone.lower()
+    genre = genre.lower()
+    
+    if "horror" in genre:
+        return {"narratorVoice": "Charon", "ambientTrack": "subterranean_rumble"}
+    elif "fantasy" in genre:
+        return {"narratorVoice": "Puck", "ambientTrack": "wind_leaves"}
+    else:
+        return {"narratorVoice": "Aoede", "ambientTrack": "desert_wind"}
 
 def generate_image_for_scene(book_id: str, scene_id: int, prompt: str) -> str:
     """
@@ -231,6 +195,7 @@ def generate_audio_for_scene(book_id: str, scene_id: int, text: str, voice: str)
     print(f"AUDIO_SYNTHESIS_INITIATED: {voice} reading {book_id}_S{scene_id}")
     # Return a sample audio file for the demo
     return "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+
 def generate_more_scenes(book_id: str, last_scene_id: int, context: str) -> List[Dict[str, Any]]:
     """
     Hallucinates/Generates new sections of a book based on its ID (Title) using Gemini 3.

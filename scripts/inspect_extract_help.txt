@@ -1,0 +1,5 @@
+Help on function extract in module langextract:
+
+extract(*args: 'Any', **kwargs: 'Any')
+    Top-level API: lx.extract(...).
+

@@ -1,0 +1,10 @@
+LangExtract Version: Unknown
+
+Top-level attributes:
+['annotation', 'core', 'data', 'exceptions', 'extract', 'factory', 'inference', 'io', 'plugins', 'prompting', 'providers', 'resolver', 'schema', 'visualization', 'visualize']
+
+Function: extract
+Top-level API: lx.extract(...).
+
+Function: visualize
+Top-level API: lx.visualize(...).

@@ -114,6 +114,20 @@ async def get_library():
                 
                 # 2. Fetch Content
                 books = []
+                
+                # DEV: Inject Local Alice Manifest if exists
+                if os.path.exists("alice_manifest.json"):
+                    try:
+                        import json
+                        with open("alice_manifest.json", "r", encoding="utf-8") as f:
+                            local_alice = json.load(f)
+                            # Add a distinct ID or tag to identify it
+                            local_alice["title"] = local_alice.get("title", "Alice") + " (Local Dev)"
+                            books.append(local_alice)
+                            print("[Proxy] Injected local alice_manifest.json")
+                    except Exception as e:
+                        print(f"[Proxy] Failed to load local alice: {e}")
+
                 for file in files:
                     if file.get("mimeType") == "application/json" and not file.get("name", "").startswith("_"):
                         content_resp = await client.get(

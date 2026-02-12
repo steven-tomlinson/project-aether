@@ -33,4 +33,4 @@ Nano Banana models are optimized for "visual reasoning," meaning they can follow
 * **Nano Banana Pro:** Built on the Gemini 3 architecture; best for rendering accurate text within images.
 * **Nano Banana (Standard):** Built on Gemini 2.5 Flash; ideal for low-latency image editing.
 
-> **⚠️ Deprecation Warning:** If your code is currently using `gemini-2.0-flash` or `gemini-2.0-flash-lite`, these are scheduled for shutdown on **March 31, 2026**. I recommend updating your `model` strings to the 2.5 or 3.0 equivalents this week to avoid service interruption.
+>
