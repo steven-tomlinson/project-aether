@@ -63,7 +63,9 @@ cmd /c "gcloud config set project $ProjectID"
 Write-Host "Building Container..." -ForegroundColor Green
 Write-Host "Building Container with Staging Config..." -ForegroundColor Green
 Write-Host "Building Container with Staging Config..." -ForegroundColor Green
-$BuildCmd = "gcloud builds submit --config cloudbuild_staging.yaml --substitutions=_STAGING_CLIENT_ID=$StagingClientId,_GOOGLE_API_KEY=$GoogleApiKey,_STARTER_FOLDER_ID=$StarterFolderId ."
+# Quote the substitutions to prevent PowerShell/gcloud parsing issues on Windows
+$Substitutions = "_STAGING_CLIENT_ID=$StagingClientId,_GOOGLE_API_KEY=$GoogleApiKey,_STARTER_FOLDER_ID=$StarterFolderId"
+$BuildCmd = "gcloud builds submit --config cloudbuild_staging.yaml --substitutions `"$Substitutions`" ."
 Write-Host "DEBUG: Running command: $BuildCmd" -ForegroundColor DarkGray
 Invoke-Expression $BuildCmd
 

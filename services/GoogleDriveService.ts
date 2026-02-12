@@ -77,36 +77,28 @@ export class GoogleDriveService {
     }
   }
 
-  async listPublicFolder(folderId: string, apiKey: string): Promise<any[]> {
+  /**
+   * Fetches the public library manifest from the backend proxy.
+   * Bypasses client-side CORS/Referrer issues by letting the server handle the API call.
+   */
+  async getPublicLibrary(): Promise<any[]> {
     try {
-      const response = await axios.get(`${DRIVE_API}/files`, {
-        params: {
-          q: `'${folderId}' in parents and trashed = false`,
-          key: apiKey,
-          fields: "files(id, name, mimeType)"
-        }
-      });
-      return response.data.files;
+      console.log("Fetching library from Backend Proxy...");
+      const response = await axios.get('/api/library');
+
+      if (response.data.error) {
+        console.error("Backend Proxy Error:", response.data.error);
+        throw new Error(response.data.error);
+      }
+
+      return response.data;
     } catch (error: any) {
-      console.error("G-DRIVE_LIST_PUBLIC_ERROR:", error.response?.data || error.message);
-      return [];
+      console.error("PROXY_LIBRARY_FETCH_ERROR:", error.response?.data || error.message);
+      throw error;
     }
   }
 
-  async getFileContent(fileId: string, apiKey: string): Promise<any | null> {
-    try {
-      const response = await axios.get(`${DRIVE_API}/files/${fileId}`, {
-        params: {
-          alt: 'media',
-          key: apiKey
-        }
-      });
-      return response.data;
-    } catch (error: any) {
-      console.error(`G-DRIVE_GET_CONTENT_ERROR [${fileId}]:`, error.response?.data || error.message);
-      return null;
-    }
-  }
+
 
   async saveCatalog(books: BookManifest[]): Promise<string> {
     if (!this.folderId) await this.initLibrary();

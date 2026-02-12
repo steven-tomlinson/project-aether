@@ -22,40 +22,19 @@ function App() {
   // 1. Load Starter Library (Public)
   useEffect(() => {
     const loadStarterLibrary = async () => {
-      if (!STARTER_MANIFEST_ID || !GOOGLE_API_KEY) {
-        console.warn("Missing VITE_STARTER_FOLDER_ID or VITE_GOOGLE_API_KEY");
-        return;
-      }
-
-      console.log("LOADING_STARTER_LIBRARY...");
-      const service = new GoogleDriveService(""); // No token needed for public
+      console.log("LOADING_STARTER_LIBRARY (VIA PROXY)...");
+      const service = new GoogleDriveService(""); // No token needed for public proxy
       try {
-        const files = await service.listPublicFolder(STARTER_MANIFEST_ID, GOOGLE_API_KEY);
-        console.log(`FOUND ${files.length} STARTER MANIFESTS`);
-
-        const loadedBooks: BookManifest[] = [];
-        await Promise.all(files.map(async (file: any) => {
-          // Basic check if it looks like a manifest file (JSON)
-          if (file.mimeType === 'application/json' && !file.name.startsWith('_')) {
-            const content = await service.getFileContent(file.id, GOOGLE_API_KEY);
-            if (content && content.id) {
-              loadedBooks.push(content);
-            }
-          }
-        }));
-
+        const loadedBooks = await service.getPublicLibrary();
         console.log(`LOADED ${loadedBooks.length} STARTER BOOKS`);
         setStarterBooks(loadedBooks);
 
         if (loadedBooks.length === 0) {
-          console.error("CRITICAL: NO BOOKS LOADED FROM DRIVE. CHECK API KEY PERMISSIONS OR FOLDER SHARING.");
+          console.error("CRITICAL: NO BOOKS LOADED FROM PROXY.");
         }
       } catch (err: any) {
         console.error("FAILED_TO_LOAD_STARTER", err);
-        if (axios.isAxiosError(err)) {
-          console.error("API Error Details:", err.response?.data);
-        }
-        alert("CRITICAL ERROR: Failed to load library from Google Drive. Check console for details.");
+        alert("CRITICAL ERROR: Failed to load library from Backend. Check console.");
       }
     };
 
