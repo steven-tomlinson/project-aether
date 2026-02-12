@@ -26,8 +26,10 @@ function App() {
       const service = new GoogleDriveService(""); // No token needed for public proxy
       try {
         const loadedBooks = await service.getPublicLibrary();
-        console.log(`LOADED ${loadedBooks.length} STARTER BOOKS`);
-        setStarterBooks(loadedBooks);
+        // Filter out malformed entries that would crash BookCard
+        const validBooks = loadedBooks.filter((b: any) => b && b.id && b.title && b.author);
+        console.log(`LOADED ${loadedBooks.length} STARTER BOOKS (${validBooks.length} valid)`);
+        setStarterBooks(validBooks);
 
         if (loadedBooks.length === 0) {
           console.error("CRITICAL: NO BOOKS LOADED FROM PROXY.");

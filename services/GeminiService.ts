@@ -74,7 +74,7 @@ export class GeminiService {
         model: "gemini-3-flash-preview",
         contents: [{
           role: 'user',
-          parts: [{ text: `Create a vivid, detailed image prompt for the cover of the sci-fi book "${book.title}" by ${book.author}. Description: ${book.description}. Style: ${book.tags.join(', ')}. Return ONLY the prompt.` }]
+          parts: [{ text: `Create a vivid, detailed image prompt for the cover of the sci-fi book "${book.title}" by ${book.author}. Description: ${book.description}. Style: ${(book.tags || []).join(', ')}. Return ONLY the prompt.` }]
         }]
       });
       return result.candidates?.[0]?.content?.parts?.[0]?.text || book.title;
