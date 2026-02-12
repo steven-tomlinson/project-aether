@@ -2,6 +2,7 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args: [ 
       'build', '-t', 'gcr.io/$PROJECT_ID/aether-app', 
+      '--build-arg', 'GOOGLE_CLIENT_ID=$_GOOGLE_CLIENT_ID',
       '--build-arg', 'VITE_GOOGLE_API_KEY=$_GOOGLE_API_KEY', 
       '--build-arg', 'VITE_STARTER_FOLDER_ID=$_STARTER_FOLDER_ID',
       '.' 
@@ -11,5 +12,6 @@ steps:
 images:
   - 'gcr.io/$PROJECT_ID/aether-app'
 substitutions:
+  _GOOGLE_CLIENT_ID: ''
   _GOOGLE_API_KEY: ''
   _STARTER_FOLDER_ID: ''
