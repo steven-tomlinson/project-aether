@@ -191,46 +191,60 @@ function App() {
 
   const handleDriveSelect = async (data: any) => {
     if (data.action === window.google.picker.Action.PICKED) {
-      const fileId = data.docs[0].id;
-      const fileName = data.docs[0].name;
-      const mimeType = data.docs[0].mimeType;
       const oauthToken = user?.token;
-
       if (!oauthToken) return;
 
       setIsUploading(true);
       try {
-        console.log(`FETCHING_DRIVE_FILE: ${fileId} (${mimeType})`);
+        // Process each picked file (supports MULTISELECT)
+        for (const doc of data.docs) {
+          const fileId = doc.id;
+          const fileName = doc.name;
+          const mimeType = doc.mimeType;
 
-        let url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
+          console.log(`FETCHING_DRIVE_FILE: ${fileId} (${mimeType})`);
 
-        // If it's a Google Doc, we must export it as text/plain
-        if (mimeType === 'application/vnd.google-apps.document') {
-          url = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=text/plain`;
+          // Determine download URL based on MIME type
+          let url: string;
+          const googleDocTypes = [
+            'application/vnd.google-apps.document',
+            'application/vnd.google-apps.spreadsheet',
+            'application/vnd.google-apps.presentation',
+          ];
+
+          if (googleDocTypes.includes(mimeType)) {
+            // Google native docs must be exported
+            url = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=text/plain`;
+          } else {
+            // Regular files: direct download
+            url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
+          }
+
+          const response = await axios.get(url, {
+            headers: { Authorization: `Bearer ${oauthToken}` },
+            responseType: 'blob'
+          });
+
+          const file = new File([response.data], fileName, { type: 'text/plain' });
+
+          // Send to Ingestion Engine
+          const newBook = await uploadBook(file);
+
+          const updatedBooks = [...userBooks, newBook];
+          setUserBooks(updatedBooks);
+
+          // Sync to Cloud
+          if (driveService) {
+            setSyncStatus('syncing');
+            await driveService.saveBook(newBook);
+            await driveService.saveCatalog(updatedBooks);
+            setSyncStatus('synced');
+          }
+
+          console.log(`INGESTION_COMPLETE: ${newBook.title}`);
         }
 
-        const response = await axios.get(url, {
-          headers: { Authorization: `Bearer ${oauthToken}` },
-          responseType: 'blob' // Important: treat as blob/file
-        });
-
-        const file = new File([response.data], fileName, { type: 'text/plain' });
-
-        // Send to Ingestion Engine
-        const newBook = await uploadBook(file);
-
-        const updatedBooks = [...userBooks, newBook];
-        setUserBooks(updatedBooks);
-
-        // Sync to Cloud
-        if (driveService) {
-          setSyncStatus('syncing');
-          await driveService.saveBook(newBook); // Backup individual
-          await driveService.saveCatalog(updatedBooks); // Update index
-          setSyncStatus('synced');
-        }
-
-        alert(`INGESTION COMPLETE: ${newBook.title}`);
+        alert(`INGESTION COMPLETE: ${data.docs.length} file(s) processed.`);
 
       } catch (error) {
         console.error("Drive Download Failed", error);
@@ -252,16 +266,28 @@ function App() {
       return;
     }
 
-    const view = new window.google.picker.View(window.google.picker.ViewId.DOCS);
-    view.setMimeTypes("text/plain,application/vnd.google-apps.document");
+    // Primary view: My Drive with folder navigation enabled
+    const myDriveView = new window.google.picker.DocsView()
+      .setIncludeFolders(true)
+      .setSelectFolderEnabled(false);
+
+    // Secondary view: All Drive documents (flat search)
+    const allDocsView = new window.google.picker.DocsView(window.google.picker.ViewId.DOCS);
+
+    // Upload view: Allow drag-and-drop uploads
+    const uploadView = new window.google.picker.DocsUploadView();
 
     const picker = new window.google.picker.PickerBuilder()
-      .enableFeature(window.google.picker.Feature.NAV_HIDDEN)
-      .setAppId("418202563769") // Project ID from config
+      .setAppId("418202563769")
       .setOAuthToken(user.token)
-      .addView(view)
-      .addView(new window.google.picker.DocsUploadView())
+      .setDeveloperKey(GOOGLE_API_KEY)
+      .addView(myDriveView)
+      .addView(allDocsView)
+      .addView(uploadView)
+      .enableFeature(window.google.picker.Feature.MULTISELECT_ENABLED)
       .setCallback(handleDriveSelect)
+      .setTitle("SELECT TEXT CARTRIDGE // PROJECT AETHER")
+      .setSize(900, 600)
       .build();
 
     picker.setVisible(true);
